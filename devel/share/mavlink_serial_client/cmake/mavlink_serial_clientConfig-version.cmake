@@ -1,0 +1,1 @@
+/home/su/bw_ws/devel/.private/mavlink_serial_client/share/mavlink_serial_client/cmake/mavlink_serial_clientConfig-version.cmake

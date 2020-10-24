@@ -1,0 +1,6 @@
+devel_space: /home/su/bw_ws/devel
+install: false
+install_space: /home/su/bw_ws/install
+profile: default
+source_space: /home/su/bw_ws/src
+workspace: /home/su/bw_ws

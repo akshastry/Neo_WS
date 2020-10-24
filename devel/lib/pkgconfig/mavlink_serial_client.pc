@@ -1,0 +1,1 @@
+/home/su/bw_ws/devel/.private/mavlink_serial_client/lib/pkgconfig/mavlink_serial_client.pc

@@ -1,0 +1,1 @@
+/home/su/bw_ws/devel/.private/catkin_tools_prebuild/setup.bash

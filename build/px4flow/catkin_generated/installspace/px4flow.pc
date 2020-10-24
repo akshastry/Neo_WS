@@ -1,0 +1,8 @@
+prefix=/home/su/bw_ws/install
+
+Name: px4flow
+Description: Description of px4flow
+Version: 0.1.0
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib 
+Requires: roscpp std_msgs sensor_msgs image_transport px_comm
