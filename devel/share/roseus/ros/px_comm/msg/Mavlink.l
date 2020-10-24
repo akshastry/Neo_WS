@@ -1,0 +1,1 @@
+/home/su/bw_ws/devel/.private/px_comm/share/roseus/ros/px_comm/msg/Mavlink.l

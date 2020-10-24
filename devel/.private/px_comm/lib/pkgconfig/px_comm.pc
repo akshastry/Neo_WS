@@ -1,0 +1,8 @@
+prefix=/home/su/bw_ws/devel/.private/px_comm
+
+Name: px_comm
+Description: Description of px_comm
+Version: 0.1.0
+Cflags: -I/home/su/bw_ws/devel/.private/px_comm/include -I/home/su/bw_ws/src/px-ros-pkg/px_comm/include
+Libs: -L${prefix}/lib 
+Requires: message_runtime
