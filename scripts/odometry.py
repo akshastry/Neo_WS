@@ -3,6 +3,7 @@
 #python imports
 import traceback
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 import Lidar_Lite
 #PX4flow import
 from px_comm.msg import OpticalFlow
@@ -104,15 +105,33 @@ def Fcon_callback(data):
 		r 	= data.angular.z
 
 def update_Rotmat():
-	global I_R_B, Omega_cross
+	global I_R_B, Omega_cross, phi, theta, psi, p, q, r
 
-	I_R_B = np
+	r = R.from_euler('ZYX', [psi, theta, phi])
+	I_R_B = r.as_dcm() #replace with as_matrix for scipy 1.4.0 and after
+	Omega_cross = np.array([[0, -r, q], [r, 0, -p], [-q, p, 0]])
 
 def update_Kalman_mat():
-	global F_k, G_k, A_k, Q_k, H_k, I_R_B, Omega_cross
+	global F_k, G_k, A_k, Q_k, H_k, I_R_B, Omega_cross, dt, phi, theta
 
 	update_Rotmat()
 
+	F_k = I
+	F_k[0:3, 3:6] = F_k[0:3, 3:6] + I_R_B * dt
+	F_k[3:6, 3:6] = F_k[3:6, 3:6] - Omega_cross * dt
+
+	G_k = np.zeros((6,3))
+	G_k[0:3,0:3] = 0.5 * dt * dt * I_R_B
+	G_k[3,0] = dt
+	G_k[4,1] = dt
+	G_k[5,2] = dt
+
+	Q_k = np.matmul(np.matmul(G_k, A_k), np.transpose(G_k))
+
+	H_k = np.zeros((3,6))
+	H_k[0,3] = 1
+	H_k[1,4] = 1
+	H_k[2,2] = 1.0/(np.cos(phi) * np.cos(theta))
 	
 
 
@@ -138,12 +157,13 @@ def main():
 			# get data
 			ground_distance_Lidar = L1.get_distance()
 
-			Z_k[0] = flow_x*ground_distance_Lidar
+			Z_k[0] = flow_x*ground_distance_Lidar - 
 			Z_k[1] = flow_y*ground_distance_Lidar
 			Z_k[2] = ground_distance_Lidar
 			
 			# filter
-			
+			update_Kalman_mat()
+			EKF()
 
 			# derive control
 			T_d 	= 
