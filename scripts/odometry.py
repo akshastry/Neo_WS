@@ -25,6 +25,10 @@ ground_distance_sonar = 0.0
 #focal length of optic flow camera
 focal_length = (16.0/24.0) *1000.0 # (focal length in mm/ pixel size in micrometer) *1000 = focal length in pixels
 
+#distance of the flow sensor and lidar from body center of mass
+r_flow_sensor = np.array([0,0,0])
+Lidar_offset_from_flow = 0.0
+
 #KF matrices
 X_k = np.zeros(6)
 P_k = np.zeros((6,6))
@@ -114,8 +118,6 @@ def update_Rotmat():
 def update_Kalman_mat():
 	global F_k, G_k, A_k, Q_k, H_k, I_R_B, Omega_cross, dt, phi, theta
 
-	update_Rotmat()
-
 	F_k = I
 	F_k[0:3, 3:6] = F_k[0:3, 3:6] + I_R_B * dt
 	F_k[3:6, 3:6] = F_k[3:6, 3:6] - Omega_cross * dt
@@ -132,11 +134,9 @@ def update_Kalman_mat():
 	H_k[0,3] = 1
 	H_k[1,4] = 1
 	H_k[2,2] = 1.0/(np.cos(phi) * np.cos(theta))
-	
-
 
 def main():
-	global flow_x, flow_y, ground_distance_sonar, main_running, Hz, Z_k
+	global flow_x, flow_y, ground_distance_sonar, main_running, Hz, X_k, Z_k, r_flow_sensor, Omega_cross, Lidar_offset_from_flow
 	L1 = Lidar_Lite.LiDAR_Lite()
 	L1.connect(1)
 	b = 2.0/(18.0+1.0)
@@ -154,14 +154,18 @@ def main():
 	while not rospy.is_shutdown():
 		main_running = True
 		try:
+			# update rotation matrices based on current sensor reading
+			update_Rotmat()
+			v_flow_sensor = np.matmul(Omega_cross, r_flow_sensor)
 			# get data
-			ground_distance_Lidar = L1.get_distance()
+			ground_distance_Lidar = L1.get_distance() + Lidar_offset_from_flow
 
-			Z_k[0] = flow_x*ground_distance_Lidar - 
-			Z_k[1] = flow_y*ground_distance_Lidar
-			Z_k[2] = ground_distance_Lidar
+			Z_k[0] = flow_x*ground_distance_Lidar - v_flow_sensor[1]
+			Z_k[1] = flow_y*ground_distance_Lidar - v_flow_sensor[2]
+			Z_k[2] = ground_distance_Lidar + r_flow_sensor[2]
 			
 			# filter
+
 			update_Kalman_mat()
 			EKF()
 
