@@ -1,0 +1,1 @@
+/home/su/bw_ws/devel/.private/odom_pkg/share/odom_pkg/cmake/odom_pkgConfig.cmake

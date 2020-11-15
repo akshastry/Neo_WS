@@ -1,0 +1,1 @@
+/home/su/bw_ws/devel/.private/odom_pkg/lib/pkgconfig/odom_pkg.pc
