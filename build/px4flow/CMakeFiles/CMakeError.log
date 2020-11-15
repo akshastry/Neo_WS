@@ -1,22 +1,22 @@
 Determining if the pthread_create exist failed with the following output:
 Change Dir: /home/su/bw_ws/build/px4flow/CMakeFiles/CMakeTmp
 
-Run Build Command:"/usr/bin/make" "cmTC_55983/fast"
-/usr/bin/make -f CMakeFiles/cmTC_55983.dir/build.make CMakeFiles/cmTC_55983.dir/build
+Run Build Command:"/usr/bin/make" "cmTC_52fbd/fast"
+/usr/bin/make -f CMakeFiles/cmTC_52fbd.dir/build.make CMakeFiles/cmTC_52fbd.dir/build
 make[1]: Entering directory '/home/su/bw_ws/build/px4flow/CMakeFiles/CMakeTmp'
-Building C object CMakeFiles/cmTC_55983.dir/CheckSymbolExists.c.o
-/usr/bin/cc     -o CMakeFiles/cmTC_55983.dir/CheckSymbolExists.c.o   -c /home/su/bw_ws/build/px4flow/CMakeFiles/CMakeTmp/CheckSymbolExists.c
-Linking C executable cmTC_55983
-/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_55983.dir/link.txt --verbose=1
-/usr/bin/cc       CMakeFiles/cmTC_55983.dir/CheckSymbolExists.c.o  -o cmTC_55983 -rdynamic 
-CMakeFiles/cmTC_55983.dir/CheckSymbolExists.c.o: In function `main':
+Building C object CMakeFiles/cmTC_52fbd.dir/CheckSymbolExists.c.o
+/usr/bin/cc     -o CMakeFiles/cmTC_52fbd.dir/CheckSymbolExists.c.o   -c /home/su/bw_ws/build/px4flow/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_52fbd
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_52fbd.dir/link.txt --verbose=1
+/usr/bin/cc       CMakeFiles/cmTC_52fbd.dir/CheckSymbolExists.c.o  -o cmTC_52fbd -rdynamic 
+CMakeFiles/cmTC_52fbd.dir/CheckSymbolExists.c.o: In function `main':
 CheckSymbolExists.c:(.text+0x16): undefined reference to `pthread_create'
 collect2: error: ld returned 1 exit status
-CMakeFiles/cmTC_55983.dir/build.make:97: recipe for target 'cmTC_55983' failed
-make[1]: *** [cmTC_55983] Error 1
+CMakeFiles/cmTC_52fbd.dir/build.make:97: recipe for target 'cmTC_52fbd' failed
+make[1]: *** [cmTC_52fbd] Error 1
 make[1]: Leaving directory '/home/su/bw_ws/build/px4flow/CMakeFiles/CMakeTmp'
-Makefile:126: recipe for target 'cmTC_55983/fast' failed
-make: *** [cmTC_55983/fast] Error 2
+Makefile:126: recipe for target 'cmTC_52fbd/fast' failed
+make: *** [cmTC_52fbd/fast] Error 2
 
 File /home/su/bw_ws/build/px4flow/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
 /* */
@@ -36,20 +36,20 @@ int main(int argc, char** argv)
 Determining if the function pthread_create exists in the pthreads failed with the following output:
 Change Dir: /home/su/bw_ws/build/px4flow/CMakeFiles/CMakeTmp
 
-Run Build Command:"/usr/bin/make" "cmTC_ac781/fast"
-/usr/bin/make -f CMakeFiles/cmTC_ac781.dir/build.make CMakeFiles/cmTC_ac781.dir/build
+Run Build Command:"/usr/bin/make" "cmTC_becaa/fast"
+/usr/bin/make -f CMakeFiles/cmTC_becaa.dir/build.make CMakeFiles/cmTC_becaa.dir/build
 make[1]: Entering directory '/home/su/bw_ws/build/px4flow/CMakeFiles/CMakeTmp'
-Building C object CMakeFiles/cmTC_ac781.dir/CheckFunctionExists.c.o
-/usr/bin/cc    -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTC_ac781.dir/CheckFunctionExists.c.o   -c /usr/share/cmake-3.5/Modules/CheckFunctionExists.c
-Linking C executable cmTC_ac781
-/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ac781.dir/link.txt --verbose=1
-/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=pthread_create    CMakeFiles/cmTC_ac781.dir/CheckFunctionExists.c.o  -o cmTC_ac781 -rdynamic -lpthreads 
+Building C object CMakeFiles/cmTC_becaa.dir/CheckFunctionExists.c.o
+/usr/bin/cc    -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTC_becaa.dir/CheckFunctionExists.c.o   -c /usr/share/cmake-3.5/Modules/CheckFunctionExists.c
+Linking C executable cmTC_becaa
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_becaa.dir/link.txt --verbose=1
+/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=pthread_create    CMakeFiles/cmTC_becaa.dir/CheckFunctionExists.c.o  -o cmTC_becaa -rdynamic -lpthreads 
 /usr/bin/ld: cannot find -lpthreads
 collect2: error: ld returned 1 exit status
-CMakeFiles/cmTC_ac781.dir/build.make:97: recipe for target 'cmTC_ac781' failed
-make[1]: *** [cmTC_ac781] Error 1
+CMakeFiles/cmTC_becaa.dir/build.make:97: recipe for target 'cmTC_becaa' failed
+make[1]: *** [cmTC_becaa] Error 1
 make[1]: Leaving directory '/home/su/bw_ws/build/px4flow/CMakeFiles/CMakeTmp'
-Makefile:126: recipe for target 'cmTC_ac781/fast' failed
-make: *** [cmTC_ac781/fast] Error 2
+Makefile:126: recipe for target 'cmTC_becaa/fast' failed
+make: *** [cmTC_becaa/fast] Error 2
 
 
