@@ -29,10 +29,10 @@ Kp_x = 1.0
 Ki_x = 0.0025
 
 Kp_y = 1.0
-Ki_y = 0.001
+Ki_y = 0.01
 
 Kp_z = 1.5
-Kd_z = 0.01
+Kd_z = 0.5
 Ki_z = 0.0001
 
 err_sum_x = 0.0
@@ -102,6 +102,14 @@ dt 		= 1.0/(1.0*Hz)
 I_R_B 	= np.eye(3)
 Omega_cross = np.zeros((3,3))
 
+
+
+
+x_k_z = np.zeros(2)
+P_k_z = np.zeros((2,2))
+sigma_P2_z = 10**(0.0)
+sigma_M2_z = 1*10**(-4)
+
 def EKF():
 	global X_k, P_k, F_k, Q_k, Z_k, H_k, R_k, I
 	# predict
@@ -124,6 +132,35 @@ def EKF():
 	# P_k		= C_k * C_k.T
 	# print(P_k - P_k.T)
 	# np.linalg.cholesky(P_k)
+
+def Kalman(x_k, P_k, z_k, sigma_P2, sigma_M2, dt):
+    F_KF = np.array([[1.0, dt], [0.0, 1.0]])
+    F_KF_T = F_KF.T
+
+    Q_KF = np.array([[0.25*dt**4, 0.5*dt**3], [0.5*dt**3, dt**2]])
+
+    x_k1 = np.transpose(np.matmul(F_KF, np.reshape(x_k, (-1, 1))))[0]
+
+    P_k1 = np.matmul(F_KF, P_k)
+    P_k = np.matmul(P_k1, F_KF_T)
+    P_k1 = P_k + Q_KF * sigma_P2
+
+    y_tilda = z_k - x_k1[0]
+    S_k = P_k1[0,0] + sigma_M2
+
+    K_KF = np.zeros(2)
+    K_KF[0] = P_k1[0,0]/S_k
+    K_KF[1] = P_k1[1,0]/S_k
+
+    x_k[0] = x_k1[0] + K_KF[0] * y_tilda
+    x_k[1] = x_k1[1] + K_KF[1] * y_tilda
+
+    P_k[0][0] = (1.0 - K_KF[0])*P_k1[0][0] + 0.0 * P_k1[1][0]  
+    P_k[0][1] = (1.0 - K_KF[0])*P_k1[0][1] + 0.0 * P_k1[1][1] 
+    P_k[1][0] = -K_KF[1]*P_k1[0][0] + 1.0 * P_k1[1][0]
+    P_k[1][1] = -K_KF[1]*P_k1[0][1] + 1.0 * P_k1[1][1]
+
+    return x_k, P_k
 
 
 def px4_callback(data):
@@ -205,7 +242,7 @@ def constrain(x, a, b):
 def main():
 	global flow_x, flow_y, ground_distance_Lidar, main_running, Hz, X_k, Z_k, r_flow_sensor, Omega_cross, Lidar_offset_from_flow, \
 	 dt, end_time, mass, g, Kp_x, Kp_y, Kp_z, Ki_x, Ki_y, Ki_z, Kd_z, err_sum_x, err_sum_y, err_sum_z, radio_on, LP_lidar, \
-	 ground_distance, phi, theta, z_prev
+	 ground_distance, phi, theta, x_k_z, P_k_z, sigma_P2_z, sigma_M2_z
 
 	ctrl = Twist();
 	states = Twist();
@@ -219,6 +256,7 @@ def main():
 	end_time = time.time()
 	pub = rospy.Publisher('/neo/odometry', Twist, queue_size=1)
 	pub1 = rospy.Publisher('/neo/states', Twist, queue_size=1)
+	pub2 = rospy.Publisher('/neo/altitude', Float64, queue_size=1)
 
 	rate = rospy.Rate(Hz)#100 Hz
 	while not rospy.is_shutdown():
@@ -247,9 +285,12 @@ def main():
 			# derive control
 			# zdd = Kp_z * (Z_d - X_k[2]) + Kd_z * (0.0 - X_k[5]) #+ Ki_z * err_sum_z
 			z = -Z_k[2]/(np.cos(phi) * np.cos(theta))
-			zd = (z - z_prev)/dt
-			z_prev = z
-			zdd = Kp_z * (Z_d - z) + Kd_z * (0.0 - zd)
+
+			x_k_z, P_k_z = Kalman(x_k_z, P_k_z, z, sigma_P2_z, sigma_M2_z, dt)
+			# pub2.publish(x_k_z[1])
+
+
+			zdd = Kp_z * (Z_d - x_k_z[0]) + Kd_z * (0.0 - x_k_z[1])
 			ydd = Kp_y * (0.0 - X_k[4]) + Ki_y * err_sum_y
 			xdd = Kp_x * (0.0 - X_k[3]) + Ki_x * err_sum_x
 
