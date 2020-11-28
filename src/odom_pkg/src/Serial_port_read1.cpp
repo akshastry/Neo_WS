@@ -1,4 +1,6 @@
 // C library headers
+#include <iostream>
+using namespace std;
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,6 +8,7 @@
 #include <math.h>
 #include <time.h>
 #include <chrono>
+#include <execinfo.h>
 
 // Linux headers
 #include <fcntl.h> // Contains file controls like O_RDWR
@@ -16,9 +19,11 @@
 // ROS headers
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
+#include "std_msgs/UInt8.h"
 
 double phi = 0.0, theta = 0.0, psi = 0.0, p = 0.0, q = 0.0, r = 0.0;
 double Td, phid, thetad, psid;
+uint8_t radio_on = 0;
 
 // Open the serial port. Change device path as needed (currently set to an standard FTDI USB-UART cable type device)
 int serial_port = open("/dev/ttyS4", O_RDWR);
@@ -33,14 +38,35 @@ void odomCallback(const geometry_msgs::Twist::ConstPtr& msg)
 {
   // printf("Hi\n");
   char ser_msg[100];
-  int checksum = sumOfDigits((int) (msg->linear.z*100000)) + sumOfDigits((int) (msg->angular.x*100000))
-  + sumOfDigits((int) (msg->angular.y*100000)) + sumOfDigits((int) (msg->angular.z*100000));
+  int checksum = sumOfDigits(round(msg->linear.z*100000)) + sumOfDigits(round(msg->angular.x*100000))
+  + sumOfDigits(round(msg->angular.y*100000)) + sumOfDigits(round(msg->angular.z*100000))
+  + sumOfDigits(round(msg->linear.x*100000));
 
-  sprintf(ser_msg, "Hi,%.5f,%.5f,%.5f,%.5f,%d\n", msg->linear.z, msg->angular.x, msg->angular.y,
-           msg->angular.z, checksum);
-  printf("%s", ser_msg);
+  sprintf(ser_msg, "Hi,%.5f,%.5f,%.5f,%.5f,%d,%d\n", msg->linear.z, msg->angular.x, msg->angular.y,
+           msg->angular.z, (int)(msg->linear.x), checksum);
+  // printf("%s", ser_msg);
 
   write(serial_port, ser_msg, sizeof(ser_msg));
+}
+
+/* Obtain a backtrace and print it to stdout. */
+void print_trace (void)
+{
+  void *array[10];
+  char **strings;
+  int size, i;
+
+  size = backtrace (array, 10);
+  strings = backtrace_symbols (array, size);
+  if (strings != NULL)
+  {
+
+    printf ("Obtained %d stack frames.\n", size);
+    for (i = 0; i < size; i++)
+      printf ("%s\n", strings[i]);
+  }
+
+  free (strings);
 }
 
 int main(int argc, char** argv) {
@@ -93,11 +119,13 @@ int main(int argc, char** argv) {
   ros::NodeHandle n;
 
   ros::Publisher Fcon_pub = n.advertise<geometry_msgs::Twist>("/serialcom/attitude_and_rate", 1);
+  ros::Publisher Rdo_pub = n.advertise<std_msgs::UInt8>("/serialcom/radio", 1);
   ros::Subscriber sub = n.subscribe("/neo/odometry", 1, odomCallback);
-
+  ros::Rate loop_rate(200);
 
 
   geometry_msgs::Twist attitude_and_rate;
+  std_msgs::UInt8 rad_on;
 
   // Allocate memory for read buffer, set size according to your needs
   char data [256];
@@ -124,86 +152,99 @@ int main(int argc, char** argv) {
 
   char filename[300], time_stamp[100]; unsigned long long int tm_stmp;
 
-sprintf(filename , "/home/su/Dropbox/Quadrotor_flight_control/Arduino_playground/LOGS/%d_%d_%d_%d_%d_%d.csv",
+  sprintf(filename , "/home/su/Dropbox/Quadrotor_flight_control/Arduino_playground/LOGS/%d_%d_%d_%d_%d_%d.csv",
    1900+ltm.tm_year, 1+ltm.tm_mon, ltm.tm_mday, ltm.tm_hour, ltm.tm_min, ltm.tm_sec);
 
   printf("Writing to file %s\n",filename);
 
   while(ros::ok())
   {
-
-    fp = fopen(filename, "a");
-    for (j = 0; j < 500; ++j)
+    try
     {
-      // get a line
-      num_bytes = read(serial_port, &data, sizeof(data));
-      data[num_bytes] = '\0';//insert endline character to /n
 
-      // get index of last ,
-      for (i = 2; i < num_bytes; ++i)
+      fp = fopen(filename, "a");
+      for (j = 0; j < 500; ++j)
       {
-        if(data[num_bytes-i] == ',')
+        // get a line
+        num_bytes = read(serial_port, &data, sizeof(data));
+        data[num_bytes] = '\0';//insert endline character to /n
+
+        // get index of last ,
+        for (i = 2; i < num_bytes; ++i)
         {
-          index = i;
-          break;
+          if(data[num_bytes-i] == ',')
+          {
+            index = i;
+            break;
+          }
         }
-      }
-      //get the number of bytes (should be after last ,)
-      nb = 0;
-      for (i = index-1; i >1 ; --i)
-      {
-        nb = nb*10 + data[num_bytes - i] - '0';
-      }
-
-      // printf("Hi\n");
-
-      //check data validity
-      if(data[0] == 'H' && data[1] == 'i' && data [2] == ',' && nb == num_bytes - index)
-      {
-        if(data[3] == 'p' && data[4] == 'r' & data[5] == 'm' && data[6] == ',')
+        //get the number of bytes (should be after last ,)
+        nb = 0;
+        for (i = index-1; i >1 ; --i)
         {
-          parse(data, num_bytes - index - 1);
+          nb = nb*10 + data[num_bytes - i] - '0';
+        }
+
+        // printf("Hi\n");
+
+        //check data validity
+        if(data[0] == 'H' && data[1] == 'i' && data [2] == ',' && nb == num_bytes - index)
+        {
+          if(data[3] == 'p' && data[4] == 'r' & data[5] == 'm' && data[6] == ',')
+          {
+            parse(data, num_bytes - index - 1);
+          }
+          else
+          {
+            // puts(data);  
+            tm_stmp = std::chrono::system_clock::now().time_since_epoch()/std::chrono::microseconds(1);
+            sprintf(time_stamp, "%lf,", tm_stmp/1000000.0 );
+            fputs(time_stamp, fp);
+            fputs(data, fp);  
+          }
+          
         }
         else
         {
-          // puts(data);  
-          tm_stmp = std::chrono::system_clock::now().time_since_epoch()/std::chrono::microseconds(1);
-          sprintf(time_stamp, "%lf,", tm_stmp/1000000.0 );
-          fputs(time_stamp, fp);
-          fputs(data, fp);  
+          puts(data);
         }
-        
+
+        tm_stmp = std::chrono::system_clock::now().time_since_epoch()/std::chrono::microseconds(1);
+        time_now = tm_stmp / 1000000.0;
+        // printf("%lf\n",time_now);
+
+        if (time_now - pub_time >= 1.0/200.0)
+        {
+          attitude_and_rate.linear.x  = phi    ;
+          attitude_and_rate.linear.y  = theta  ;
+          attitude_and_rate.linear.z  = psi    ;
+          attitude_and_rate.angular.x = p      ;
+          attitude_and_rate.angular.y = q      ;
+          attitude_and_rate.angular.z = r      ;
+
+          Fcon_pub.publish(attitude_and_rate);
+          rad_on.data = radio_on;
+          Rdo_pub.publish(rad_on);
+          
+
+          tm_stmp = std::chrono::system_clock::now().time_since_epoch()/std::chrono::microseconds(1);
+          pub_time = tm_stmp / 1000000.0;
+
+        }
+        ros::spinOnce();
+
       }
-      else
-      {
-        puts(data);
-      }
+      fclose(fp);
 
 
+      
+          // printf("Hi\n");
     }
-    fclose(fp);
-
-    tm_stmp = std::chrono::system_clock::now().time_since_epoch()/std::chrono::microseconds(1);
-    time_now = tm_stmp / 1000000.0;
-
-    if (time_now - pub_time >= 1.0/200.0)
+    catch(...)
     {
-      attitude_and_rate.linear.x  = phi    ;
-      attitude_and_rate.linear.y  = theta  ;
-      attitude_and_rate.linear.z  = psi    ;
-      attitude_and_rate.angular.x = p      ;
-      attitude_and_rate.angular.y = q      ;
-      attitude_and_rate.angular.z = r      ;
-
-      Fcon_pub.publish(attitude_and_rate);
-      ros::spinOnce();
-
-      tm_stmp = std::chrono::system_clock::now().time_since_epoch()/std::chrono::microseconds(1);
-      pub_time = tm_stmp / 1000000.0;
-
+      printf("An exception occurred in Serial_port_read1.cpp .\n");
+      print_trace();
     }
-    
-        // printf("Hi\n");
   }
 
   close(serial_port);
@@ -239,6 +280,10 @@ void parse(char data[], uint8_t end)
   else if(data[7] == '_' && data[8] == 'r' && data[9] == '_' && data[10] == ',')
   {
     r = atof(value);
+  }
+  else if(data[7] == 'r' && data[8] == 'd' && data[9] == 'o' && data[10] == ',')
+  {
+    radio_on = int(atof(value));
   }
   else
   {
@@ -306,11 +351,16 @@ void reverse(char* str, int len)
 
 int sumOfDigits(int x)
 {
+    x = abs(x);
+    // printf("%d, ",x);
     int sum = 0;
     while (x != 0)
     {
         sum += x %10;
         x   = x /10;
     }
+    // printf("%d\n", sum);
     return sum;
+
+
 }

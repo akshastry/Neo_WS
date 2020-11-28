@@ -60,6 +60,7 @@ CMakeFiles/serialcom.dir/src/Serial_port_read1.cpp.o: /opt/ros/kinetic/include/r
 CMakeFiles/serialcom.dir/src/Serial_port_read1.cpp.o: /opt/ros/kinetic/include/ros/wall_timer.h
 CMakeFiles/serialcom.dir/src/Serial_port_read1.cpp.o: /opt/ros/kinetic/include/ros/wall_timer_options.h
 CMakeFiles/serialcom.dir/src/Serial_port_read1.cpp.o: /opt/ros/kinetic/include/rosconsole/macros_generated.h
+CMakeFiles/serialcom.dir/src/Serial_port_read1.cpp.o: /opt/ros/kinetic/include/std_msgs/UInt8.h
 CMakeFiles/serialcom.dir/src/Serial_port_read1.cpp.o: /opt/ros/kinetic/include/xmlrpcpp/XmlRpcDecl.h
 CMakeFiles/serialcom.dir/src/Serial_port_read1.cpp.o: /opt/ros/kinetic/include/xmlrpcpp/XmlRpcValue.h
 

@@ -1,0 +1,7 @@
+[01m[K/home/su/bw_ws/src/odom_pkg/src/Serial_port_read1.cpp:[m[K In function ‘[01m[Kint main(int, char**)[m[K’:
+[01m[K/home/su/bw_ws/src/odom_pkg/src/Serial_port_read1.cpp:217:22:[m[K [01;31m[Kerror: [m[Kcannot convert ‘[01m[Kdouble[m[K’ to ‘[01m[Kconst char*[m[K’ for argument ‘[01m[K1[m[K’ to ‘[01m[Kint printf(const char*, ...)[m[K’
+       printf(time_now);
+[01;32m[K                      ^[m[K
+make[2]: *** [CMakeFiles/serialcom.dir/src/Serial_port_read1.cpp.o] Error 1
+make[1]: *** [CMakeFiles/serialcom.dir/all] Error 2
+make: *** [all] Error 2

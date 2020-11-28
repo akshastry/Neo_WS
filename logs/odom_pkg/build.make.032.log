@@ -1,0 +1,12 @@
+[35m[1mScanning dependencies of target serialcom[0m
+[ 50%] [32mBuilding CXX object CMakeFiles/serialcom.dir/src/Serial_port_read1.cpp.o[0m
+[01m[K/home/su/bw_ws/src/odom_pkg/src/Serial_port_read1.cpp:[m[K In function ‘[01m[Kint main(int, char**)[m[K’:
+[01m[K/home/su/bw_ws/src/odom_pkg/src/Serial_port_read1.cpp:217:22:[m[K [01;31m[Kerror: [m[Kcannot convert ‘[01m[Kdouble[m[K’ to ‘[01m[Kconst char*[m[K’ for argument ‘[01m[K1[m[K’ to ‘[01m[Kint printf(const char*, ...)[m[K’
+       printf(time_now);
+[01;32m[K                      ^[m[K
+CMakeFiles/serialcom.dir/build.make:62: recipe for target 'CMakeFiles/serialcom.dir/src/Serial_port_read1.cpp.o' failed
+CMakeFiles/Makefile2:803: recipe for target 'CMakeFiles/serialcom.dir/all' failed
+Makefile:138: recipe for target 'all' failed
+make[2]: *** [CMakeFiles/serialcom.dir/src/Serial_port_read1.cpp.o] Error 1
+make[1]: *** [CMakeFiles/serialcom.dir/all] Error 2
+make: *** [all] Error 2

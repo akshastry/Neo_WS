@@ -1,3 +1,4 @@
+import traceback
 #Lidar import
 import Lidar_Lite_v4
 # ROS imports
@@ -13,7 +14,12 @@ def main():
 	pub = rospy.Publisher('/lidarlite/distance', Float64, queue_size=1)
 
 	while not rospy.is_shutdown():
-		pub.publish(L1.get_distance());
+		try:
+			pub.publish(L1.get_distance());
+		except Exception:
+			traceback.print_exc()
+			#rospy.loginfo('Some error ocurred in px4.py')
+			indent = 1
 
 if __name__ == '__main__':
     try:

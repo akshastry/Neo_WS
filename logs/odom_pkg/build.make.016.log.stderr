@@ -1,0 +1,5 @@
+[01m[K/home/su/bw_ws/src/odom_pkg/src/Serial_port_read1.cpp:22:22:[m[K [01;31m[Kfatal error: [m[Kstd_msgs.h: No such file or directory
+compilation terminated.
+make[2]: *** [CMakeFiles/serialcom.dir/src/Serial_port_read1.cpp.o] Error 1
+make[1]: *** [CMakeFiles/serialcom.dir/all] Error 2
+make: *** [all] Error 2
