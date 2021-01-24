@@ -8,6 +8,8 @@ from std_msgs.msg import Float64
 def main():
 	L1 = Lidar_Lite_v4.LiDAR_Lite_v4()
 	L1.connect(1)
+	L1.bus.close()
+	L1.connect(1)
 	L1.set_high_acc(0x06)
 
 	rospy.init_node('lidar', anonymous=True)
@@ -18,6 +20,8 @@ def main():
 			pub.publish(L1.get_distance());
 		except Exception:
 			traceback.print_exc()
+			L1.bus.close()
+			L1.connect(1)
 			#rospy.loginfo('Some error ocurred in px4.py')
 			indent = 1
 

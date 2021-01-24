@@ -8,6 +8,8 @@
 
 # modified environment variables
 export CMAKE_PREFIX_PATH="/home/su/bw_ws/devel/.private/mavlink_serial_client:$CMAKE_PREFIX_PATH"
+export LD_LIBRARY_PATH="/home/su/bw_ws/devel/.private/mavlink_serial_client/lib:$LD_LIBRARY_PATH"
+export PKG_CONFIG_PATH="/home/su/bw_ws/devel/.private/mavlink_serial_client/lib/pkgconfig:$PKG_CONFIG_PATH"
 export PWD='/home/su/bw_ws/build/mavlink_serial_client'
 export ROSLISP_PACKAGE_DIRECTORIES="/home/su/bw_ws/devel/.private/mavlink_serial_client/share/common-lisp:$ROSLISP_PACKAGE_DIRECTORIES"
 export ROS_PACKAGE_PATH="/home/su/bw_ws/src/px-ros-pkg/drivers/mavlink_serial_client:$ROS_PACKAGE_PATH"
