@@ -1,0 +1,1 @@
+/home/su/bw_ws/devel/.private/RealSense/share/RealSense/cmake/RealSenseConfig-version.cmake

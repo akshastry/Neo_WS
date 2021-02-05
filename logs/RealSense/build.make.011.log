@@ -1,0 +1,12 @@
+[35m[1mScanning dependencies of target realsense_pose[0m
+[ 50%] [32mBuilding CXX object CMakeFiles/realsense_pose.dir/src/pose.cpp.o[0m
+[100%] [32m[1mLinking CXX executable /home/su/bw_ws/devel/.private/RealSense/lib/RealSense/realsense_pose[0m
+/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crt1.o: In function `_start':
+(.text+0x20): undefined reference to `main'
+collect2: error: ld returned 1 exit status
+CMakeFiles/realsense_pose.dir/build.make:94: recipe for target '/home/su/bw_ws/devel/.private/RealSense/lib/RealSense/realsense_pose' failed
+make[2]: *** [/home/su/bw_ws/devel/.private/RealSense/lib/RealSense/realsense_pose] Error 1
+CMakeFiles/Makefile2:195: recipe for target 'CMakeFiles/realsense_pose.dir/all' failed
+make[1]: *** [CMakeFiles/realsense_pose.dir/all] Error 2
+Makefile:138: recipe for target 'all' failed
+make: *** [all] Error 2

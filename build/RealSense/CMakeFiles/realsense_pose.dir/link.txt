@@ -1,0 +1,1 @@
+/usr/bin/c++    -std=c++11   CMakeFiles/realsense_pose.dir/src/pose.cpp.o  -o /home/su/bw_ws/devel/.private/RealSense/lib/RealSense/realsense_pose -rdynamic -lrealsense2 

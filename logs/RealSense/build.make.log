@@ -1,0 +1,4 @@
+[35m[1mScanning dependencies of target realsense_pose[0m
+[ 50%] [32mBuilding CXX object CMakeFiles/realsense_pose.dir/src/pose.cpp.o[0m
+[100%] [32m[1mLinking CXX executable /home/su/bw_ws/devel/.private/RealSense/lib/RealSense/realsense_pose[0m
+[100%] Built target realsense_pose
