@@ -21,7 +21,7 @@ using namespace std;
 #include "geometry_msgs/Twist.h"
 #include "std_msgs/UInt8.h"
 
-double phi = 0.0, theta = 0.0, psi = 0.0, p = 0.0, q = 0.0, r = 0.0;
+double phi = 0.0, theta = 0.0, psi = 0.0, p = 0.0, q = 0.0, r = 0.0, alt_des = 0.0, u_des = 0.0, v_des = 0.0;
 double Td, phid, thetad, psid;
 uint8_t radio_on = 0;
 
@@ -119,12 +119,14 @@ int main(int argc, char** argv) {
   ros::NodeHandle n;
 
   ros::Publisher Fcon_pub = n.advertise<geometry_msgs::Twist>("/serialcom/attitude_and_rate", 1);
+  ros::Publisher Alt_vel_pub = n.advertise<geometry_msgs::Vector3>("/serialcom/alt_vel_des", 1);
   ros::Publisher Rdo_pub = n.advertise<std_msgs::UInt8>("/serialcom/radio", 1);
   ros::Subscriber sub = n.subscribe("/neo/odometry", 1, odomCallback);
   ros::Rate loop_rate(200);
 
 
   geometry_msgs::Twist attitude_and_rate;
+  geometry_msgs::Vector3 alt_vel_des;
   std_msgs::UInt8 rad_on;
 
   // Allocate memory for read buffer, set size according to your needs
@@ -221,8 +223,13 @@ int main(int argc, char** argv) {
           attitude_and_rate.angular.x = p      ;
           attitude_and_rate.angular.y = q      ;
           attitude_and_rate.angular.z = r      ;
-
           Fcon_pub.publish(attitude_and_rate);
+
+          alt_vel_des.x = u_des;
+          alt_vel_des.y = v_des;
+          alt_vel_des.z = alt_des;
+          Alt_vel_pub.publish(alt_vel_des);
+
           rad_on.data = radio_on;
           Rdo_pub.publish(rad_on);
           
@@ -284,6 +291,18 @@ void parse(char data[], uint8_t end)
   else if(data[7] == 'r' && data[8] == 'd' && data[9] == 'o' && data[10] == ',')
   {
     radio_on = int(atof(value));
+  }
+  else if(data[7] == 'a' && data[8] == 'l' && data[9] == 't' && data[10] == ',')
+  {
+    alt_des = atof(value);
+  }
+  else if(data[7] == '_' && data[8] == 'u' && data[9] == '_' && data[10] == ',')
+  {
+    u_des = atof(value);
+  }
+  else if(data[7] == '_' && data[8] == 'v' && data[9] == '_' && data[10] == ',')
+  {
+    v_des = atof(value);
   }
   else
   {

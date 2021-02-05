@@ -8,6 +8,8 @@
 
 # modified environment variables
 export CMAKE_PREFIX_PATH="/home/su/bw_ws/devel/.private/px4flow:$CMAKE_PREFIX_PATH"
+export LD_LIBRARY_PATH="/home/su/bw_ws/devel/.private/px4flow/lib:$LD_LIBRARY_PATH"
+export PKG_CONFIG_PATH="/home/su/bw_ws/devel/.private/px4flow/lib/pkgconfig:$PKG_CONFIG_PATH"
 export PWD='/home/su/bw_ws/build/px4flow'
 export ROSLISP_PACKAGE_DIRECTORIES="/home/su/bw_ws/devel/.private/px4flow/share/common-lisp:$ROSLISP_PACKAGE_DIRECTORIES"
 export ROS_PACKAGE_PATH="/home/su/bw_ws/src/px-ros-pkg/drivers/px4flow:$ROS_PACKAGE_PATH"

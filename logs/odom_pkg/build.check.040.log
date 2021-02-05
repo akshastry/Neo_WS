@@ -16,5 +16,13 @@
 [36m--[0m BUILD_SHARED_LIBS is on
 [36m--[0m Using these message generators: gencpp;geneus;genlisp;gennodejs;genpy
 [36m--[0m Configuring done
+CMake Warning (dev) at CMakeLists.txt:13 (add_dependencies):
+  Policy CMP0046 is not set: Error on non-existent dependency in
+  add_dependencies.  Run "cmake --help-policy CMP0046" for policy details.
+  Use the cmake_policy command to set the policy and suppress this warning.
+
+  The dependency target "odom_pkg_cpp" of target "serialcom" does not exist.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
 [36m--[0m Generating done
 [36m--[0m Build files have been written to: /home/su/bw_ws/build/odom_pkg

@@ -10,6 +10,5 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 
 add_executable(serialcom src/Serial_port_read1.cpp)
 target_link_libraries(serialcom ${catkin_LIBRARIES})
-add_dependencies(serialcom odom_pkg_cpp)
 
 
