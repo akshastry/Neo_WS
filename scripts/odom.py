@@ -258,12 +258,12 @@ def lidar_callback(data):
 		z_KF_update(z_k)
 
 def Alt_vel_callback(data):
-	global Z_d, u_d, v_d, main_running
+	global Z_d, u_d, v_d
 	
-	if (~main_running):
-		u_d 	= data.x
-		v_d 	= data.y
-		Z_d 	= -data.z
+	
+	u_d 	= data.x
+	v_d 	= data.y
+	Z_d 	= -data.z
 
 def Rdo_callback(data):
 	global err_sum_x, err_sum_y, err_sum_z, radio_on
