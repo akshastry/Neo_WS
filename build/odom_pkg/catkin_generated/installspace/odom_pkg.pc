@@ -1,0 +1,8 @@
+prefix=/home/su/neo_ws/install
+
+Name: odom_pkg
+Description: Description of odom_pkg
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

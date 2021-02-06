@@ -1,0 +1,4 @@
+Symlinking /home/su/neo_ws/devel/share/realsense/cmake/realsenseConfig-version.cmake
+Symlinking /home/su/neo_ws/devel/share/realsense/cmake/realsenseConfig.cmake
+Symlinking /home/su/neo_ws/devel/lib/pkgconfig/realsense.pc
+Symlinking /home/su/neo_ws/devel/lib/realsense/realsense_pose

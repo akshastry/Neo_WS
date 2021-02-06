@@ -1,0 +1,1 @@
+/home/su/neo_ws/devel/.private/realsense/lib/pkgconfig/realsense.pc

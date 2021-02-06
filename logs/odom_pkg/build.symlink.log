@@ -1,0 +1,4 @@
+Symlinking /home/su/neo_ws/devel/share/odom_pkg/cmake/odom_pkgConfig.cmake
+Symlinking /home/su/neo_ws/devel/share/odom_pkg/cmake/odom_pkgConfig-version.cmake
+Symlinking /home/su/neo_ws/devel/lib/odom_pkg/serialcom
+Symlinking /home/su/neo_ws/devel/lib/pkgconfig/odom_pkg.pc

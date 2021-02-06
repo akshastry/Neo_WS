@@ -1,0 +1,1 @@
+/home/su/neo_ws/devel/.private/px_comm/lib/python2.7/dist-packages/px_comm/msg/_Mavlink.py

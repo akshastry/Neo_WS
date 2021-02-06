@@ -1,0 +1,1 @@
+/home/su/neo_ws/devel/.private/odom_pkg/lib/pkgconfig/odom_pkg.pc

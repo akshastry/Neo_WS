@@ -1,0 +1,16 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/su/neo_ws/src/RealSense/src/pose.cpp
+librealsense2/rs.hpp
+-
+iostream
+-
+iomanip
+-
+

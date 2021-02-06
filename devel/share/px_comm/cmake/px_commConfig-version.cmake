@@ -1,0 +1,1 @@
+/home/su/neo_ws/devel/.private/px_comm/share/px_comm/cmake/px_commConfig-version.cmake
