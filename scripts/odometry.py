@@ -29,16 +29,16 @@ LP_lidar = 0.3
 ground_distance = 0.06
 
 
-Kp_x = 3.0#2.5
+Kp_x = 3.5#2.5
 Kd_x = 0.0#0.001
 Ki_x = 0.0035
 
-Kp_y = 3.2#2.5
+Kp_y = 3.9#2.5
 Kd_y = 0.0#0.001
 Ki_y = 0.0035
 
-Kp_z = 3.0#2.0
-Kd_z = 1.5#0.9
+Kp_z = 4.0#2.0
+Kd_z = 1.8#0.9
 Ki_z = 0.007
 
 err_sum_x = 0.0
@@ -118,12 +118,12 @@ sigma_M2_z = 1*10**(-4)
 
 x_k_x = np.zeros(2)
 P_k_x = np.zeros((2,2))
-sigma_P2_x = 10**(-2.0)
+sigma_P2_x = 10.0*10**(-3.0)
 sigma_M2_x = 1*10**(-4)
 
 x_k_y = np.zeros(2)
 P_k_y = np.zeros((2,2))
-sigma_P2_y = 10**(-2.0)
+sigma_P2_y = 10.0*10**(-3.0)
 sigma_M2_y = 1*10**(-4)
 
 x_k_x1 = np.zeros(3)
@@ -589,8 +589,8 @@ def main():
 			# tm = now.strftime("%H,%M,%S")
 			# data = "%f,%f,%f,%f,%f,%f,%f\n"%(rospy.get_time(), x_k_x[0], x_k_x[1], Kp_x * (0.0 - x_k_x[0]), Kd_x*(0.0 - x_k_x[1]), Ki_x * err_sum_x, theta_d * 180.0/np.pi)
 			# data = "%f,%f,%f,%f,%f,%f,%f\n"%(rospy.get_time(), x_k_y[0], x_k_y[1], Kp_y * (0.0 - x_k_y[0]), Kd_y*(0.0 - x_k_y[1]), Ki_y * err_sum_y, phi_d*180.0/np.pi)
-			data = "%f, ,%f,%f,%f,%f, ,%f,%f,%f,%f, ,%f,%f,%f,%f,%f, ,%f,%f,%f,%f\n"%(rospy.get_time(), x_k_x[0], x_k_x[1], \
-			 		Ki_x * err_sum_x, ctrl.angular.y, x_k_y[0], x_k_y[1], Ki_y * err_sum_y, ctrl.angular.x, Z_d,\
+			data = "%f, ,%f,%f,%f,%f,%f, ,%f,%f,%f,%f,%f, ,%f,%f,%f,%f,%f, ,%f,%f,%f,%f\n"%(rospy.get_time(), u_d, x_k_x[0], x_k_x[1], \
+			 		Ki_x * err_sum_x, ctrl.angular.y, v_d, x_k_y[0], x_k_y[1], Ki_y * err_sum_y, ctrl.angular.x, Z_d,\
 			  		x_k_z[0], x_k_z[1], Ki_z * err_sum_z, ctrl.linear.z, x_k_x1[0], x_k_y1[0], x_p, y_p)
 			# data = "%f,%f,%f,%f\n"%(rospy.get_time(), x_k_x[0], x_k_x[1], Ki_x * err_sum_x, theta_d * 180.0/np.pi)#, x_k_y[0], x_k_y[1], Ki_y * err_sum_y, phi_d * 180.0/np.pi, Z_d, x_k_z[0], x_k_z[1], Ki_z * err_sum_z, T_d)
 

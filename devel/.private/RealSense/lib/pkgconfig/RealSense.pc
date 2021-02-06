@@ -1,0 +1,8 @@
+prefix=/home/su/bw_ws/devel/.private/RealSense
+
+Name: RealSense
+Description: Description of RealSense
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
