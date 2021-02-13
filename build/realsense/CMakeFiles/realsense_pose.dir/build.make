@@ -90,6 +90,25 @@ realsense_pose_EXTERNAL_OBJECTS =
 
 /home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: CMakeFiles/realsense_pose.dir/src/pose.cpp.o
 /home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: CMakeFiles/realsense_pose.dir/build.make
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /opt/ros/kinetic/lib/libroscpp.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /usr/lib/x86_64-linux-gnu/libboost_filesystem.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /usr/lib/x86_64-linux-gnu/libboost_signals.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /opt/ros/kinetic/lib/librosconsole.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /opt/ros/kinetic/lib/librosconsole_log4cxx.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /opt/ros/kinetic/lib/librosconsole_backend_interface.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /usr/lib/x86_64-linux-gnu/liblog4cxx.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /usr/lib/x86_64-linux-gnu/libboost_regex.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /opt/ros/kinetic/lib/libroscpp_serialization.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /opt/ros/kinetic/lib/libxmlrpcpp.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /opt/ros/kinetic/lib/librostime.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /opt/ros/kinetic/lib/libcpp_common.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /usr/lib/x86_64-linux-gnu/libboost_system.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /usr/lib/x86_64-linux-gnu/libboost_thread.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /usr/lib/x86_64-linux-gnu/libboost_chrono.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /usr/lib/x86_64-linux-gnu/libboost_date_time.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /usr/lib/x86_64-linux-gnu/libboost_atomic.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /usr/lib/x86_64-linux-gnu/libpthread.so
+/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: /usr/lib/x86_64-linux-gnu/libconsole_bridge.so
 /home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose: CMakeFiles/realsense_pose.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/su/neo_ws/build/realsense/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable /home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/realsense_pose.dir/link.txt --verbose=$(VERBOSE)

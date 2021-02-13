@@ -1,0 +1,7 @@
+[01m[K/home/su/neo_ws/src/RealSense/src/pose.cpp:[m[K In function ‘[01m[Kint main(int, char**)[m[K’:
+[01m[K/home/su/neo_ws/src/RealSense/src/pose.cpp:98:33:[m[K [01;31m[Kerror: [m[K‘[01m[Kasin2[m[K’ was not declared in this scope
+             yaw.data = -asin(t2);
+[01;32m[K                                 ^[m[K
+make[2]: *** [CMakeFiles/realsense_pose.dir/src/pose.cpp.o] Error 1
+make[1]: *** [CMakeFiles/realsense_pose.dir/all] Error 2
+make: *** [all] Error 2

@@ -1,0 +1,18 @@
+[35m[1mScanning dependencies of target realsense_pose[0m
+[ 50%] [32mBuilding CXX object CMakeFiles/realsense_pose.dir/src/pose.cpp.o[0m
+[01m[K/home/su/neo_ws/src/RealSense/src/pose.cpp:[m[K In function ‘[01m[Kint main(int, char**)[m[K’:
+[01m[K/home/su/neo_ws/src/RealSense/src/pose.cpp:98:13:[m[K [01;31m[Kerror: [m[K‘[01m[Ktheta[m[K’ was not declared in this scope
+             theta = asin(t2);
+[01;32m[K             ^[m[K
+[01m[K/home/su/neo_ws/src/RealSense/src/pose.cpp:100:13:[m[K [01;31m[Kerror: [m[K‘[01m[Kt3[m[K’ was not declared in this scope
+             t3 = +2.0 * (pose_data.rotation.w * pose_data.rotation.z + pose_data.rotation.x * pose_data.rotation.y)
+[01;32m[K             ^[m[K
+[01m[K/home/su/neo_ws/src/RealSense/src/pose.cpp:108:20:[m[K [01;31m[Kerror: [m[K‘[01m[Kpsi[m[K’ was not declared in this scope
+             if(abs(psi) > M_PI/2.0 && theta < 0.0)
+[01;32m[K                    ^[m[K
+CMakeFiles/realsense_pose.dir/build.make:62: recipe for target 'CMakeFiles/realsense_pose.dir/src/pose.cpp.o' failed
+make[2]: *** [CMakeFiles/realsense_pose.dir/src/pose.cpp.o] Error 1
+CMakeFiles/Makefile2:355: recipe for target 'CMakeFiles/realsense_pose.dir/all' failed
+make[1]: *** [CMakeFiles/realsense_pose.dir/all] Error 2
+Makefile:138: recipe for target 'all' failed
+make: *** [all] Error 2
