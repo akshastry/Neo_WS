@@ -64,7 +64,6 @@ protected:
   typedef dynamic_reconfigure::Server<Config> ReconfigureServer;
   std::shared_ptr<ReconfigureServer> reconfigure_server_;
   Config config_;
-  cv_bridge::CvImage scaled_cv_;
 
   virtual void onInit();
   void connectCb();
@@ -174,10 +173,10 @@ void ResizeNodelet::imageCb(const sensor_msgs::ImageConstPtr& image_msg)
     config = config_;
   }
 
-  cv_bridge::CvImageConstPtr cv_ptr;
+  cv_bridge::CvImagePtr cv_ptr;
   try
   {
-    cv_ptr = cv_bridge::toCvShare(image_msg);
+    cv_ptr = cv_bridge::toCvCopy(image_msg);
   }
   catch (cv_bridge::Exception& e)
   {
@@ -187,19 +186,17 @@ void ResizeNodelet::imageCb(const sensor_msgs::ImageConstPtr& image_msg)
 
   if (config.use_scale)
   {
-    cv::resize(cv_ptr->image, scaled_cv_.image, cv::Size(0, 0), config.scale_width, config.scale_height,
+    cv::resize(cv_ptr->image, cv_ptr->image, cv::Size(0, 0), config.scale_width, config.scale_height,
                config.interpolation);
   }
   else
   {
     int height = config.height == -1 ? image_msg->height : config.height;
     int width = config.width == -1 ? image_msg->width : config.width;
-    cv::resize(cv_ptr->image, scaled_cv_.image, cv::Size(width, height), 0, 0, config.interpolation);
+    cv::resize(cv_ptr->image, cv_ptr->image, cv::Size(width, height), 0, 0, config.interpolation);
   }
 
-  scaled_cv_.header = image_msg->header;
-  scaled_cv_.encoding = image_msg->encoding;
-  pub_image_.publish(scaled_cv_.toImageMsg());
+  pub_image_.publish(cv_ptr->toImageMsg());
 }
 
 }  // namespace image_proc

@@ -35,10 +35,7 @@
 #define DEPTH_IMAGE_PROC_DEPTH_TRAITS
 
 #include <algorithm>
-#include <cmath>
-#include <cstdint>
 #include <limits>
-#include <vector>
 
 namespace depth_image_proc {
 
