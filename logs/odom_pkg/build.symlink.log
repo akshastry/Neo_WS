@@ -1,4 +1,4 @@
-Linked: (/home/su/neo_ws/devel/.private/odom_pkg/share/odom_pkg/cmake/odom_pkgConfig.cmake, /home/su/neo_ws/devel/share/odom_pkg/cmake/odom_pkgConfig.cmake)
-Linked: (/home/su/neo_ws/devel/.private/odom_pkg/share/odom_pkg/cmake/odom_pkgConfig-version.cmake, /home/su/neo_ws/devel/share/odom_pkg/cmake/odom_pkgConfig-version.cmake)
-Linked: (/home/su/neo_ws/devel/.private/odom_pkg/lib/odom_pkg/serialcom, /home/su/neo_ws/devel/lib/odom_pkg/serialcom)
-Linked: (/home/su/neo_ws/devel/.private/odom_pkg/lib/pkgconfig/odom_pkg.pc, /home/su/neo_ws/devel/lib/pkgconfig/odom_pkg.pc)
+Symlinking /home/su/neo_ws/devel/share/odom_pkg/cmake/odom_pkgConfig.cmake
+Symlinking /home/su/neo_ws/devel/share/odom_pkg/cmake/odom_pkgConfig-version.cmake
+Symlinking /home/su/neo_ws/devel/lib/odom_pkg/serialcom
+Symlinking /home/su/neo_ws/devel/lib/pkgconfig/odom_pkg.pc

@@ -1,4 +1,4 @@
-Linked: (/home/su/neo_ws/devel/.private/realsense/share/realsense/cmake/realsenseConfig-version.cmake, /home/su/neo_ws/devel/share/realsense/cmake/realsenseConfig-version.cmake)
-Linked: (/home/su/neo_ws/devel/.private/realsense/share/realsense/cmake/realsenseConfig.cmake, /home/su/neo_ws/devel/share/realsense/cmake/realsenseConfig.cmake)
-Linked: (/home/su/neo_ws/devel/.private/realsense/lib/pkgconfig/realsense.pc, /home/su/neo_ws/devel/lib/pkgconfig/realsense.pc)
-Linked: (/home/su/neo_ws/devel/.private/realsense/lib/realsense/realsense_pose, /home/su/neo_ws/devel/lib/realsense/realsense_pose)
+Symlinking /home/su/neo_ws/devel/share/realsense/cmake/realsenseConfig-version.cmake
+Symlinking /home/su/neo_ws/devel/share/realsense/cmake/realsenseConfig.cmake
+Symlinking /home/su/neo_ws/devel/lib/pkgconfig/realsense.pc
+Symlinking /home/su/neo_ws/devel/lib/realsense/realsense_pose
