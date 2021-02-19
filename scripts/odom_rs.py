@@ -10,7 +10,6 @@ from threading import Lock
 #ROS imports
 import rospy
 from geometry_msgs.msg import Twist, Vector3
-from std_msgs.msg import Float64
 from std_msgs.msg import UInt8
 
 from datetime import datetime
@@ -98,9 +97,9 @@ def pos_vel_callback(data):
 	VY = (1 - LP_VY) * VY + LP_VY * data.angular.y;
 	VZ = (1 - LP_VZ) * VZ + LP_VZ * data.angular.z;
 
-def yaw_callback(data):
+def att_callback(data):
 	global yaw
-	yaw = (1 - LP_yaw) * yaw + LP_yaw * data.data
+	yaw = (1 - LP_yaw) * yaw + LP_yaw * data.z
 
 # def Alt_vel_callback(data):
 # 	global Z_d, u_d, v_d
@@ -138,7 +137,7 @@ def main():
 	rospy.init_node('odom', anonymous=True)
 
 	rospy.Subscriber('/rs_t265/position_and_velocity', Twist, pos_vel_callback)
-	rospy.Subscriber('/rs_t265/yaw', Float64, yaw_callback)
+	rospy.Subscriber('/rs_t265/attitude', Vector3, att_callback)
 	# rospy.Subscriber('/serialcom/alt_vel_des', Vector3, Alt_vel_callback)
 	rospy.Subscriber('/serialcom/radio', UInt8, Rdo_callback)
 
