@@ -13,6 +13,7 @@
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/Vector3.h"
+#include "tf/tf.h"
 // #include "std_msgs/Float64.h"
 
 /* Obtain a backtrace and print it to stdout. */
@@ -63,6 +64,9 @@ try
 
     double t0, t1, t2, t3, t4, psi, theta, phi;
 
+    tf::Quaternion q;
+    tf::Matrix3x3 R, C;
+
     // // Main loop
     while (ros::ok())
     {
@@ -86,51 +90,69 @@ try
             odom_msg.angular.z = -pose_data.velocity.y      ;
             odom_pub.publish(odom_msg);
 
+            q.setW(pose_data.rotation.w);
+            q.setX(pose_data.rotation.x);
+            q.setY(pose_data.rotation.y);
+            q.setZ(pose_data.rotation.z);
+            R.setRotation(q);
+
+            C.setEulerYPR(0.0, M_PI/2.0, M_PI/2.0);
+
+            //R_new = C'*R*C
+            R *= C;
+            C = C.transpose();
+            C *= R;
+
+            C.getEulerYPR(yaw, pitch, roll);
 
 
 
-            //yaw is pitch for real sense axes
-            t0 = +2.0 * (pose_data.rotation.w * pose_data.rotation.x + pose_data.rotation.y * pose_data.rotation.z);
-            t1 = +1.0 - 2.0 * (pose_data.rotation.x * pose_data.rotation.x + pose_data.rotation.y * pose_data.rotation.y);
-            phi = atan2(t0, t1);
-
-            t2 = +2.0 * (pose_data.rotation.w * pose_data.rotation.y - pose_data.rotation.z * pose_data.rotation.x);
-            if(t2 > 1.0)
-            {
-                t2 = 1.0;
-            }
-            if(t2 < -1.0)
-            {
-                t2 = -1.0;
-            }
-            theta = asin(t2);
-
-            t3 = +2.0 * (pose_data.rotation.w * pose_data.rotation.z + pose_data.rotation.x * pose_data.rotation.y);
-            t4 = +1.0 - 2.0 * (pose_data.rotation.y * pose_data.rotation.y + pose_data.rotation.z * pose_data.rotation.z);
-            psi = atan2(t3, t4);
-
-
-            // conversion to body axes rotation
-            if(fabs(psi) > M_PI/2.0 && theta > 0.0)
-            {
-                yaw = theta - M_PI;
-            }
-            else if(fabs(psi) > M_PI/2.0 && theta < 0.0)
-            {
-                yaw = theta + M_PI;
-            }
-            else
-            {
-                yaw = -theta;
-            }
-
-            pitch = phi;
-
-            roll = -psi;
 
 
 
-            // printf("%f\n", pitch*180.0/M_PI);
+
+            // //yaw is pitch for real sense axes
+            // t0 = +2.0 * (pose_data.rotation.w * pose_data.rotation.x + pose_data.rotation.y * pose_data.rotation.z);
+            // t1 = +1.0 - 2.0 * (pose_data.rotation.x * pose_data.rotation.x + pose_data.rotation.y * pose_data.rotation.y);
+            // phi = atan2(t0, t1);
+
+            // t2 = +2.0 * (pose_data.rotation.w * pose_data.rotation.y - pose_data.rotation.z * pose_data.rotation.x);
+            // if(t2 > 1.0)
+            // {
+            //     t2 = 1.0;
+            // }
+            // if(t2 < -1.0)
+            // {
+            //     t2 = -1.0;
+            // }
+            // theta = asin(t2);
+
+            // t3 = +2.0 * (pose_data.rotation.w * pose_data.rotation.z + pose_data.rotation.x * pose_data.rotation.y);
+            // t4 = +1.0 - 2.0 * (pose_data.rotation.y * pose_data.rotation.y + pose_data.rotation.z * pose_data.rotation.z);
+            // psi = atan2(t3, t4);
+
+
+            // // conversion to body axes rotation
+            // if(fabs(psi) > M_PI/2.0 && theta > 0.0)
+            // {
+            //     yaw = theta - M_PI;
+            // }
+            // else if(fabs(psi) > M_PI/2.0 && theta < 0.0)
+            // {
+            //     yaw = theta + M_PI;
+            // }
+            // else
+            // {
+            //     yaw = -theta;
+            // }
+
+            // pitch = phi;
+
+            // roll = -psi;
+
+
+
+            // printf("%f, %f, %f\n", roll*180.0/M_PI, pitch*180.0/M_PI, yaw*180.0/M_PI);
 
             
             attitude_msg.x = roll;
