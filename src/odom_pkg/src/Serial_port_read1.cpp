@@ -20,8 +20,9 @@ using namespace std;
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
 #include "std_msgs/UInt8.h"
+#include "std_msgs/Float64.h"
 
-double phi = 0.0, theta = 0.0, psi = 0.0, p = 0.0, q = 0.0, r = 0.0, alt_des = 0.0, u_des = 0.0, v_des = 0.0;
+double phi = 0.0, theta = 0.0, psi = 0.0, p = 0.0, q = 0.0, r = 0.0, alt_des = 0.0, u_des = 0.0, v_des = 0.0, yaw_des = 0.0;
 double Td, phid, thetad, psid;
 uint8_t radio_on = 0;
 
@@ -119,6 +120,7 @@ int main(int argc, char** argv) {
   ros::NodeHandle n;
 
   ros::Publisher Fcon_pub = n.advertise<geometry_msgs::Twist>("/serialcom/attitude_and_rate", 1);
+  ros::Publisher yaw_pub = n.advertise<std_msgs::Float64>("/serialcom/yaw_des", 1);
   ros::Publisher Alt_vel_pub = n.advertise<geometry_msgs::Vector3>("/serialcom/alt_vel_des", 1);
   ros::Publisher Rdo_pub = n.advertise<std_msgs::UInt8>("/serialcom/radio", 1);
   ros::Subscriber sub = n.subscribe("/neo/odometry", 1, odomCallback);
@@ -128,6 +130,8 @@ int main(int argc, char** argv) {
   geometry_msgs::Twist attitude_and_rate;
   geometry_msgs::Vector3 alt_vel_des;
   std_msgs::UInt8 rad_on;
+  std_msgs::Float64 yawd;
+
 
   // Allocate memory for read buffer, set size according to your needs
   char data [256];
@@ -229,6 +233,8 @@ int main(int argc, char** argv) {
           alt_vel_des.y = v_des;
           alt_vel_des.z = alt_des;
           Alt_vel_pub.publish(alt_vel_des);
+          yawd.data = yaw_des;
+          yaw_pub.publish(yawd);
 
           rad_on.data = radio_on;
           Rdo_pub.publish(rad_on);
@@ -303,6 +309,10 @@ void parse(char data[], uint8_t end)
   else if(data[7] == '_' && data[8] == 'v' && data[9] == '_' && data[10] == ',')
   {
     v_des = atof(value);
+  }
+  else if(data[7] == 'y' && data[8] == 'w' && data[9] == 'd' && data[10] == ',')
+  {
+    yaw_des = atof(value);
   }
   else
   {
