@@ -1,3 +1,5 @@
+Ship-trackng camera
+
 image_width: 640
 image_height: 480
 camera_name: camera
@@ -18,3 +20,13 @@ projection_matrix:
   rows: 3
   cols: 4
   data: [745.2708740234375, 0, 438.5210295379802, 0, 0, 750.370849609375, 244.7968064669767, 0, 0, 0, 1, 0]
+
+
+
+
+The camera axis centered on the image with x-axis along quad y(or along the letter Global shutter) and y along quad -x, z is coincident with quad z(or coming out of the camera lens)
+
+The aruco marker tracking gives pose of the aruco marker in camera frame
+
+
+
