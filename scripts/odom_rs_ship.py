@@ -9,7 +9,7 @@ from scipy.spatial.transform import Rotation as R
 from threading import Lock
 #ROS imports
 import rospy
-from geometry_msgs.msg import Twist, Vector3
+from geometry_msgs.msg import Twist, Vector3, PoseStamped
 from std_msgs.msg import UInt8, Float64
 
 from datetime import datetime
@@ -67,7 +67,9 @@ VX = 0.0
 VY = 0.0
 VZ = 0.0
 
-yaw = 0.0
+yaw 	= 0.0
+pitch 	= 0.0
+roll 	= 0.0
 
 
 #
@@ -79,11 +81,13 @@ LP_VX = 0.7
 LP_VY = 0.9
 LP_VZ = 0.9
 
-LP_yaw = 0.9
+LP_yaw 	 = 0.9
+LP_pitch = 0.9
+LP_roll  = 0.9
 
 
 #
-phi_d = 0.0
+phi_d 	= 0.0
 theta_d = 0.0
 
 Hz 		= 100
@@ -102,8 +106,35 @@ def pos_vel_callback(data):
 	VZ = (1 - LP_VZ) * VZ + LP_VZ * data.angular.z;
 
 def att_callback(data):
-	global yaw
-	yaw = (1 - LP_yaw) * yaw + LP_yaw * data.z
+	global yaw, pitch, roll, LP_yaw, LP_pitch, LP_roll
+	yaw 	= (1 - LP_yaw) 	 * yaw 	 + LP_yaw 	* data.z
+	pitch 	= (1 - LP_pitch) * pitch + LP_pitch * data.y
+	roll 	= (1 - LP_roll)  * roll  + LP_roll 	* data.x
+
+def aruco_callback(data):
+
+
+	aruco_detect_time = rospy.get_time()
+
+	X = -data.pose.position.y + 0.125
+	Y = data.pose.position.x
+	Z = data.pose.position.z
+
+	q0 = data.pose.orientation.w
+	q1 = data.pose.orientation.x
+	q2 = data.pose.orientation.y
+	q3 = data.pose.orientation.z
+
+	cmra2mrkr = R.from_quat([q1, q2, q3, q0])
+	bdy2cmra  = R.from_euler('ZYX', [np.pi/2.0, 0.0 ,0.0])
+	mrkr2trgt = R.from_euler('ZYX', [np.pi/2.0, 0.0, np.pi]) # mrkr is aruco marker frame, trgt is same frame but with axes parallel to body axes
+
+	bdy2trgt = bdy2cmra * cmra2mrkr * mrkr2trgt
+	psi, theta, phi = bdy2trgt.as_euler('ZYX')
+
+	
+
+	# rospy.loginfo('%.3f, %.3f, %.3f, %.3f, %.3f, %.3f', X, Y, Z, phi*180.0/np.pi, theta*180.0/np.pi, psi*180.0/np.pi)
 
 # def Alt_vel_callback(data):
 # 	global Z_d, u_d, v_d
@@ -154,6 +185,8 @@ def main():
 
 	rospy.init_node('odom', anonymous=True)
 
+	rospy.Subscriber('/aruco_single/pose', PoseStamped, aruco_callback)
+	
 	rospy.Subscriber('/rs_t265/position_and_velocity', Twist, pos_vel_callback)
 	rospy.Subscriber('/rs_t265/attitude', Vector3, att_callback)
 	rospy.Subscriber('/serialcom/alt_vel_des', Vector3, Alt_vel_callback)
@@ -163,9 +196,9 @@ def main():
 	pub = rospy.Publisher('/neo/control', Twist, queue_size=1)
 
 	rate = rospy.Rate(Hz)#100 Hz
-	fo = open(filename, "a")
-	print("writing to %s"%(filename))
-	file_write_ctr = 1
+	# fo = open(filename, "a")
+	# print("writing to %s"%(filename))
+	# file_write_ctr = 1
 	while not rospy.is_shutdown():
 		try:
 
@@ -216,17 +249,17 @@ def main():
 			pub.publish(ctrl);
 
 
-			data = "%f, ,%f,%f,%f,%f,%f, ,%f,%f,%f,%f,%f, ,%f,%f,%f,%f,%f\n"%(rospy.get_time(), X_d, X, VX, \
-			 		Ki_x * err_sum_x, ctrl.angular.y, Y_d, Y, VY, Ki_y * err_sum_y, ctrl.angular.x, Z_d,\
-			  		Z, VZ, Ki_z * err_sum_z, ctrl.linear.z)
+			# data = "%f, ,%f,%f,%f,%f,%f, ,%f,%f,%f,%f,%f, ,%f,%f,%f,%f,%f\n"%(rospy.get_time(), X_d, X, VX, \
+			#  		Ki_x * err_sum_x, ctrl.angular.y, Y_d, Y, VY, Ki_y * err_sum_y, ctrl.angular.x, Z_d,\
+			#   		Z, VZ, Ki_z * err_sum_z, ctrl.linear.z)
 
-			fo.write(data)
-			file_write_ctr = file_write_ctr  + 1
+			# fo.write(data)
+			# file_write_ctr = file_write_ctr  + 1
 			
-			if(file_write_ctr >=500):
-				fo.close()
-				fo = open(filename, "a")
-				file_write_ctr = 1
+			# if(file_write_ctr >=500):
+			# 	fo.close()
+			# 	fo = open(filename, "a")
+			# 	file_write_ctr = 1
 
 		except Exception:
 			traceback.print_exc()
