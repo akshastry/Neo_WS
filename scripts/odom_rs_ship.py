@@ -51,14 +51,16 @@ err_sum_yaw = 0.0
 
 
 
-#
+# desired
 X_d = 0.0;
 Y_d = 0.0;
 Z_d = -1.5;
-yaw_d = 0.0;
+phi_d 	= 0.0; # actually a outer loop control
+theta_d = 0.0; # actually a outer loop control
+yaw_d 	= 0.0;
 
 
-#
+# states
 X = 0.0
 Y = 0.0
 Z = 0.0
@@ -72,7 +74,7 @@ pitch 	= 0.0
 roll 	= 0.0
 
 
-#
+#Low Pass
 LP_X = 0.55
 LP_Y = 0.35
 LP_Z = 0.55
@@ -86,12 +88,32 @@ LP_pitch = 0.9
 LP_roll  = 0.9
 
 
-#
-phi_d 	= 0.0
-theta_d = 0.0
-
+#Loop rate
 Hz 		= 100
 dt 		= 1.0/(1.0*Hz)
+
+# Aruco
+X_t = 0.0; 
+Y_t = 0.0; 
+Z_t = 0.0;
+phi_t 	= 0.0;
+theta_t = 0.0;
+psi_t 	= 0.0;
+
+# Kalman
+dt_KF 	= 1.0/30.0
+
+F_KF = np.array([[1.0, dt_KF], [0.0, 1.0]])
+F_KF_T = F_KF.T
+
+Q_KF = np.array([[0.25*dt_KF**4, 0.5*dt_KF**3], [0.5*dt_KF**3, dt_KF**2]])
+
+x_k_x = np.zeros(2); P_k_x = 100.0*np.ones((2,2)); sigma_P2_x = 10**(0.0); sigma_M2_x = 5*10**(-6.0)
+x_k_y = np.zeros(2); P_k_y = 100.0*np.ones((2,2)); sigma_P2_y = 10**(0.0); sigma_M2_y = 5*10**(-6.0)
+x_k_z = np.zeros(2); P_k_z = 100.0*np.ones((2,2)); sigma_P2_z = 10**(0.0); sigma_M2_z = 5*10**(-6.0)
+
+# temporary
+v2p = 0.0
 
 def pos_vel_callback(data):
 	global X, Y, Z, VX, VY, VZ, yaw, theta_d
@@ -111,15 +133,46 @@ def att_callback(data):
 	pitch 	= (1 - LP_pitch) * pitch + LP_pitch * data.y
 	roll 	= (1 - LP_roll)  * roll  + LP_roll 	* data.x
 
+def Kalman_Filter(x_k, P_k, u_k, z_k, sigma_P2, sigma_M2):
+    global F_KF, F_KF_T, Q_KF, dt_KF
+
+    x_k[0] = F_KF[0,0] * x_k[0] + F_KF[0,1] * x_k[1] + 0.5*dt_KF**2 * u_k
+    x_k[1] = F_KF[1,0] * x_k[0] + F_KF[1,1] * x_k[1] + dt_KF * u_k
+
+    P_k  = np.matmul(np.matmul(F_KF, P_k), F_KF_T)
+    P_k1 = P_k + Q_KF * sigma_P2
+
+    y_tilda = z_k - x_k[0]
+    S_k = P_k1[0,0] + sigma_M2
+
+    K_KF = np.zeros(2)
+    K_KF[0] = P_k1[0,0]/S_k
+    K_KF[1] = P_k1[1,0]/S_k
+
+    x_k[0] = x_k[0] + K_KF[0] * y_tilda
+    x_k[1] = x_k[1] + K_KF[1] * y_tilda
+
+    P_k[0][0] = (1.0 - K_KF[0])*P_k1[0][0] + 0.0 * P_k1[1][0]  
+    P_k[0][1] = (1.0 - K_KF[0])*P_k1[0][1] + 0.0 * P_k1[1][1] 
+    P_k[1][0] = 	 - K_KF[1] *P_k1[0][0] + 1.0 * P_k1[1][0]
+    P_k[1][1] = 	 - K_KF[1] *P_k1[0][1] + 1.0 * P_k1[1][1]
+
+    return x_k, P_k
+
 def aruco_callback(data):
+	global X_t, Y_t, Z_t, phi_t, theta_t, psi_t
+	global x_k_x, x_k_y, x_k_z, P_k_x, P_k_y, P_k_z
+	global sigma_P2_x, sigma_P2_y, sigma_P2_z, sigma_M2_x, sigma_M2_y, sigma_M2_z
+	global v2p
 
+	# aruco_detect_time = rospy.get_time()
 
-	aruco_detect_time = rospy.get_time()
+	#get position
+	X_t = -data.pose.position.y + 0.125
+	Y_t = data.pose.position.x
+	Z_t = data.pose.position.z
 
-	X = -data.pose.position.y + 0.125
-	Y = data.pose.position.x
-	Z = data.pose.position.z
-
+	#get orientation
 	q0 = data.pose.orientation.w
 	q1 = data.pose.orientation.x
 	q2 = data.pose.orientation.y
@@ -130,18 +183,16 @@ def aruco_callback(data):
 	mrkr2trgt = R.from_euler('ZYX', [np.pi/2.0, 0.0, np.pi]) # mrkr is aruco marker frame, trgt is same frame but with axes parallel to body axes
 
 	bdy2trgt = bdy2cmra * cmra2mrkr * mrkr2trgt
-	psi, theta, phi = bdy2trgt.as_euler('ZYX')
+	psi_t, theta_t, phi_t = bdy2trgt.as_euler('ZYX')
 
-	
+	#filter position
+	x_k_x, P_k_x = Kalman_Filter(x_k_x, P_k_x, 0.0, X_t, sigma_P2_x, sigma_M2_x)
+	x_k_y, P_k_y = Kalman_Filter(x_k_y, P_k_y, 0.0, Y_t, sigma_P2_y, sigma_M2_y)
+	x_k_z, P_k_z = Kalman_Filter(x_k_z, P_k_z, 0.0, Z_t, sigma_P2_z, sigma_M2_z)
+
+	v2p = v2p + x_k_y[1] * dt_KF
 
 	# rospy.loginfo('%.3f, %.3f, %.3f, %.3f, %.3f, %.3f', X, Y, Z, phi*180.0/np.pi, theta*180.0/np.pi, psi*180.0/np.pi)
-
-# def Alt_vel_callback(data):
-# 	global Z_d, u_d, v_d
-	
-# 	u_d 	= data.x
-# 	v_d 	= data.y
-# 	Z_d 	= -data.z
 
 def Alt_vel_callback(data):
 	global Z_d, X_d, Y_d
@@ -156,7 +207,7 @@ def yawd_callback(data):
 	yaw_d 	= data.data
 
 def Rdo_callback(data):
-	global err_sum_x, err_sum_y, err_sum_z, radio_on,   X_d, Y_d, X, Y
+	global err_sum_x, err_sum_y, err_sum_z, err_sum_yaw, radio_on,   X_d, Y_d, X, Y
 	
 	if(data.data == 0):
 		err_sum_x = 0.0
@@ -181,19 +232,26 @@ def main():
 	global Hz, filename, mass, g, Kp_yaw, Kp_x, Kp_y, Kp_z, Ki_yaw, Ki_x, Ki_y, Ki_z, Kd_z, err_sum_x, err_sum_y, err_sum_z, \
 	err_sum_yaw, radio_on, X, Y, Z, VX, VY, VZ, X_d, Y_d, Z_d, yaw_d, yaw, phi_d, theta_d
 
-	ctrl = Twist();
+	global x_k_x, x_k_y, x_k_z
+
+	global Y_t, v2p
+
+	ctrl 	= Twist();
+	states 	= Twist();
+	out		= Twist();
 
 	rospy.init_node('odom', anonymous=True)
 
-	rospy.Subscriber('/aruco_single/pose', PoseStamped, aruco_callback)
-	
-	rospy.Subscriber('/rs_t265/position_and_velocity', Twist, pos_vel_callback)
-	rospy.Subscriber('/rs_t265/attitude', Vector3, att_callback)
-	rospy.Subscriber('/serialcom/alt_vel_des', Vector3, Alt_vel_callback)
-	rospy.Subscriber('/serialcom/yaw_des', Float64, yawd_callback)
-	rospy.Subscriber('/serialcom/radio', UInt8, Rdo_callback)
+	rospy.Subscriber('/aruco_single/pose', 			   PoseStamped, aruco_callback)	
+	rospy.Subscriber('/rs_t265/position_and_velocity', Twist, 		pos_vel_callback)
+	rospy.Subscriber('/rs_t265/attitude', 			   Vector3, 	att_callback)
+	rospy.Subscriber('/serialcom/alt_vel_des', 		   Vector3, 	Alt_vel_callback)
+	rospy.Subscriber('/serialcom/yaw_des', 			   Float64, 	yawd_callback)
+	rospy.Subscriber('/serialcom/radio', 			   UInt8, 		Rdo_callback)
 
-	pub = rospy.Publisher('/neo/control', Twist, queue_size=1)
+	pub  = rospy.Publisher('/neo/control', Twist, queue_size=1)
+	pub1 = rospy.Publisher('/neo/states',  Twist, queue_size=1)
+	pub2 = rospy.Publisher('/neo/out',     Twist, queue_size=1)
 
 	rate = rospy.Rate(Hz)#100 Hz
 	# fo = open(filename, "a")
@@ -247,6 +305,25 @@ def main():
 			ctrl.angular.y 	= constrain(theta_d * 180.0/np.pi, -15.0, 15.0)
 			ctrl.angular.z 	= constrain(r_d * 180.0/np.pi, -60, 60)
 			pub.publish(ctrl);
+
+
+			states.linear.x 	= x_k_x[0]
+			states.linear.y 	= x_k_y[0]
+			states.linear.z 	= x_k_z[0]
+			states.angular.x 	= x_k_x[1]
+			states.angular.y 	= x_k_y[1]
+			states.angular.z 	= x_k_z[1]
+			pub1.publish(states);
+
+
+			out.linear.x 	= Y_t
+			out.linear.y 	= x_k_y[0]
+			out.linear.z 	= v2p
+			out.angular.x 	= 0.0
+			out.angular.y 	= 0.0
+			out.angular.z 	= 0.0
+			pub2.publish(out);
+
 
 
 			# data = "%f, ,%f,%f,%f,%f,%f, ,%f,%f,%f,%f,%f, ,%f,%f,%f,%f,%f\n"%(rospy.get_time(), X_d, X, VX, \
