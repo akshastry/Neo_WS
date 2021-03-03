@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
   ros::Publisher yaw_pub = n.advertise<std_msgs::Float64>("/serialcom/yaw_des", 1);
   ros::Publisher Alt_vel_pub = n.advertise<geometry_msgs::Vector3>("/serialcom/alt_vel_des", 1);
   ros::Publisher Rdo_pub = n.advertise<std_msgs::UInt8>("/serialcom/radio", 1);
-  ros::Subscriber sub = n.subscribe("/neo/odometry", 1, odomCallback);
+  ros::Subscriber sub = n.subscribe("/neo/control", 1, odomCallback);
   ros::Rate loop_rate(200);
 
 
