@@ -147,8 +147,9 @@ def constrain(x, a, b):
 	return x
 
 def main():
-	global Hz, filename, mass, g, Kp_yaw, Kp_x, Kp_y, Kp_z, Ki_yaw, Ki_x, Ki_y, Ki_z, Kd_z, err_sum_x, err_sum_y, err_sum_z, \
-	err_sum_yaw, radio_on, X, Y, Z, VX, VY, VZ, X_d, Y_d, Z_d, yaw_d, yaw, phi_d, theta_d
+	global Hz, filename, mass, g, Kp_yaw, Kp_x, Kp_y, Kp_z, Ki_yaw, Ki_x, Ki_y, Ki_z, Kd_z, Kd_y, Kd_x,\
+	err_sum_x, err_sum_y, err_sum_z, err_sum_yaw, radio_on, X, Y, Z, VX, VY, VZ, yaw, \
+	X_d, Y_d, Z_d, yaw_d, phi_d, theta_d
 
 	ctrl = Twist();
 
