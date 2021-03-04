@@ -106,12 +106,13 @@ F_KF_T = F_KF.T
 
 Q_KF = np.array([[0.25*dt_KF**4, 0.5*dt_KF**3], [0.5*dt_KF**3, dt_KF**2]])
 
-x_k_x = np.zeros(2); P_k_x = 100.0*np.ones((2,2)); sigma_P2_x = 10**(0.0); sigma_M2_x = 5*10**(-6.0)
-x_k_y = np.zeros(2); P_k_y = 100.0*np.ones((2,2)); sigma_P2_y = 10**(0.0); sigma_M2_y = 5*10**(-6.0)
-x_k_z = np.zeros(2); P_k_z = 100.0*np.ones((2,2)); sigma_P2_z = 10**(0.0); sigma_M2_z = 5*10**(-6.0)
+x_k_x = np.zeros(2); P_k_x = 100.0*np.ones((2,2)); sigma_P2_x =  0.3*10**(0.0); sigma_M2_x = 5*10**(-4.0); # 0.3
+x_k_y = np.zeros(2); P_k_y = 100.0*np.ones((2,2)); sigma_P2_y =  4.0*10**(0.0); sigma_M2_y = 5*10**(-4.0); # 4
+x_k_z = np.zeros(2); P_k_z = 100.0*np.ones((2,2)); sigma_P2_z = 30.0*10**(0.0); sigma_M2_z = 5*10**(-4.0); # 30
 
 # temporary
-v2p = 0.0
+v2p  = 0.0
+meas = 0.0
 
 # autonomy mode or aruco mode
 autonomy_mode = True
@@ -120,12 +121,12 @@ autonomy_mode = True
 aruco_detect_time = 0.0
 
 def pos_vel_callback(data):
-	global X, Y, Z, VX, VY, VZ, yaw, theta
+	global X, Y, Z, VX, VY, VZ, yaw, pitch
 
 	# 0.155m is the distance of t265 from quad center of mass
-	X = (1 - LP_X) * X + LP_X * (data.linear.x + 0.155*(1-np.cos(yaw)) + 0.155*(1-np.cos(theta)));
+	X = (1 - LP_X) * X + LP_X * (data.linear.x + 0.155*(1-np.cos(yaw)) + 0.155*(1-np.cos(pitch)));
 	Y = (1 - LP_Y) * Y + LP_Y * (data.linear.y - 0.155*np.sin(yaw));
-	Z = (1 - LP_Z) * Z + LP_Z * (data.linear.z + 0.155*np.sin(theta));
+	Z = (1 - LP_Z) * Z + LP_Z * (data.linear.z + 0.155*np.sin(pitch));
 
 	VX = (1 - LP_VX) * VX + LP_VX * data.angular.x;
 	VY = (1 - LP_VY) * VY + LP_VY * data.angular.y;
@@ -169,12 +170,18 @@ def aruco_callback(data):
 	global sigma_P2_x, sigma_P2_y, sigma_P2_z, sigma_M2_x, sigma_M2_y, sigma_M2_z
 	global v2p
 	global autonomy_mode, aruco_detect_time
+	global X, Y, Z, roll, pitch, yaw
 	global yaw, yaw_d
+
+	global meas
 
 	#get position
 	X_t = -data.pose.position.y + 0.125
 	Y_t = data.pose.position.x
 	Z_t = data.pose.position.z
+
+	in2bdy = R.from_euler('ZYX', [yaw, pitch, roll])
+	X_t, Y_t, Z_t = in2bdy.apply([X_t, Y_t, Z_t])
 
 	#get orientation
 	q0 = data.pose.orientation.w
@@ -190,16 +197,18 @@ def aruco_callback(data):
 	psi_t, theta_t, phi_t = bdy2trgt.as_euler('ZYX')
 
 	#filter position
-	x_k_x, P_k_x = Kalman_Filter(x_k_x, P_k_x, 0.0, X_t, sigma_P2_x, sigma_M2_x)
-	x_k_y, P_k_y = Kalman_Filter(x_k_y, P_k_y, 0.0, Y_t, sigma_P2_y, sigma_M2_y)
-	x_k_z, P_k_z = Kalman_Filter(x_k_z, P_k_z, 0.0, Z_t, sigma_P2_z, sigma_M2_z)
+	x_k_x, P_k_x = Kalman_Filter(x_k_x, P_k_x, 0.0, X_t + X, sigma_P2_x, sigma_M2_x)
+	x_k_y, P_k_y = Kalman_Filter(x_k_y, P_k_y, 0.0, Y_t + Y, sigma_P2_y, sigma_M2_y)
+	x_k_z, P_k_z = Kalman_Filter(x_k_z, P_k_z, 0.0, Z_t + Z, sigma_P2_z, sigma_M2_z)
 
-	v2p = v2p + x_k_y[1] * dt_KF
+	meas = Z_t + Z
+	v2p = v2p + x_k_z[1] * dt_KF
 
 	# rospy.loginfo('%.3f, %.3f, %.3f, %.3f, %.3f, %.3f', X, Y, Z, phi*180.0/np.pi, theta*180.0/np.pi, psi*180.0/np.pi)
 
 	autonomy_mode = False
-	yaw_d = yaw + psi_t
+	yaw_d = (1 - 0.6) * yaw_d + 0.6 * (yaw + psi_t)
+
 
 def Alt_vel_callback(data):
 	global Z_d, X_d, Y_d
@@ -210,7 +219,7 @@ def Alt_vel_callback(data):
 
 def yawd_callback(data):
 	global yaw_d, autonomy_mode
-	
+
 	if(autonomy_mode):
 		yaw_d 	= data.data
 
@@ -237,7 +246,7 @@ def constrain(x, a, b):
 	return x
 
 def autonomy_control():
-	global Kp_x, Kp_y, Kp_z, Kd_x, Kd_y, Kd_z, Ki_x, Ki_y, Ki_z,
+	global Kp_x, Kp_y, Kp_z, Kd_x, Kd_y, Kd_z, Ki_x, Ki_y, Ki_z
 	global Kp_yaw, Ki_yaw
 	global err_sum_x, err_sum_y, err_sum_z, err_sum_yaw
 	global X_d, Y_d, Z_d, yaw_d
@@ -273,7 +282,7 @@ def main():
 
 	global x_k_x, x_k_y, x_k_z
 
-	global Y_t, v2p
+	global meas, v2p, yaw_d, psi_t
 
 	ctrl 	= Twist();
 	states 	= Twist();
@@ -336,13 +345,13 @@ def main():
 			pub1.publish(states);
 
 
-			# out.linear.x 	= Y_t
-			# out.linear.y 	= x_k_y[0]
-			# out.linear.z 	= v2p
-			# out.angular.x 	= 0.0
-			# out.angular.y 	= 0.0
-			# out.angular.z 	= 0.0
-			# pub2.publish(out);
+			out.linear.x 	= meas
+			out.linear.y 	= x_k_z[0]
+			out.linear.z 	= v2p
+			out.angular.x 	= yaw_d * 180.0/np.pi
+			out.angular.y 	= psi_t * 180.0/np.pi
+			out.angular.z 	= 0.0
+			pub2.publish(out);
 
 
 

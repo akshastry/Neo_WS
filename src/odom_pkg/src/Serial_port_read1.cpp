@@ -168,7 +168,7 @@ int main(int argc, char** argv) {
     try
     {
 
-      fp = fopen(filename, "a");
+      // fp = fopen(filename, "a");
       for (j = 0; j < 500; ++j)
       {
         // get a line
@@ -205,8 +205,8 @@ int main(int argc, char** argv) {
             // puts(data);  
             tm_stmp = std::chrono::system_clock::now().time_since_epoch()/std::chrono::microseconds(1);
             sprintf(time_stamp, "%lf,", tm_stmp/1000000.0 );
-            fputs(time_stamp, fp);
-            fputs(data, fp);  
+            // fputs(time_stamp, fp);
+            // fputs(data, fp);  
           }
           
         }
@@ -247,7 +247,7 @@ int main(int argc, char** argv) {
         ros::spinOnce();
 
       }
-      fclose(fp);
+      // fclose(fp);
 
 
       

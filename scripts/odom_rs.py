@@ -164,9 +164,9 @@ def main():
 	pub = rospy.Publisher('/neo/control', Twist, queue_size=1)
 
 	rate = rospy.Rate(Hz)#100 Hz
-	fo = open(filename, "a")
-	print("writing to %s"%(filename))
-	file_write_ctr = 1
+	# fo = open(filename, "a")
+	# print("writing to %s"%(filename))
+	# file_write_ctr = 1
 	while not rospy.is_shutdown():
 		try:
 
@@ -217,17 +217,17 @@ def main():
 			pub.publish(ctrl);
 
 
-			data = "%f, ,%f,%f,%f,%f,%f, ,%f,%f,%f,%f,%f, ,%f,%f,%f,%f,%f\n"%(rospy.get_time(), X_d, X, VX, \
-			 		Ki_x * err_sum_x, ctrl.angular.y, Y_d, Y, VY, Ki_y * err_sum_y, ctrl.angular.x, Z_d,\
-			  		Z, VZ, Ki_z * err_sum_z, ctrl.linear.z)
+			# data = "%f, ,%f,%f,%f,%f,%f, ,%f,%f,%f,%f,%f, ,%f,%f,%f,%f,%f\n"%(rospy.get_time(), X_d, X, VX, \
+			#  		Ki_x * err_sum_x, ctrl.angular.y, Y_d, Y, VY, Ki_y * err_sum_y, ctrl.angular.x, Z_d,\
+			#   		Z, VZ, Ki_z * err_sum_z, ctrl.linear.z)
 
-			fo.write(data)
-			file_write_ctr = file_write_ctr  + 1
+			# fo.write(data)
+			# file_write_ctr = file_write_ctr  + 1
 			
-			if(file_write_ctr >=500):
-				fo.close()
-				fo = open(filename, "a")
-				file_write_ctr = 1
+			# if(file_write_ctr >=500):
+			# 	fo.close()
+			# 	fo = open(filename, "a")
+			# 	file_write_ctr = 1
 
 		except Exception:
 			traceback.print_exc()
