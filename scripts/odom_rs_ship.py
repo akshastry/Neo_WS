@@ -55,8 +55,6 @@ err_sum_yaw = 0.0
 X_d = 0.0;
 Y_d = 0.0;
 Z_d = -1.5;
-phi_d 	= 0.0; # actually a outer loop control
-theta_d = 0.0; # actually a outer loop control
 yaw_d 	= 0.0;
 
 
@@ -115,13 +113,19 @@ x_k_z = np.zeros(2); P_k_z = 100.0*np.ones((2,2)); sigma_P2_z = 10**(0.0); sigma
 # temporary
 v2p = 0.0
 
+# autonomy mode or aruco mode
+autonomy_mode = True
+
+# initializing aruco_detect_time
+aruco_detect_time = 0.0
+
 def pos_vel_callback(data):
-	global X, Y, Z, VX, VY, VZ, yaw, theta_d
+	global X, Y, Z, VX, VY, VZ, yaw, theta
 
 	# 0.155m is the distance of t265 from quad center of mass
-	X = (1 - LP_X) * X + LP_X * (data.linear.x + 0.155*(1-np.cos(yaw)) + 0.155*(1-np.cos(theta_d)));
+	X = (1 - LP_X) * X + LP_X * (data.linear.x + 0.155*(1-np.cos(yaw)) + 0.155*(1-np.cos(theta)));
 	Y = (1 - LP_Y) * Y + LP_Y * (data.linear.y - 0.155*np.sin(yaw));
-	Z = (1 - LP_Z) * Z + LP_Z * (data.linear.z + 0.155*np.sin(theta_d));
+	Z = (1 - LP_Z) * Z + LP_Z * (data.linear.z + 0.155*np.sin(theta));
 
 	VX = (1 - LP_VX) * VX + LP_VX * data.angular.x;
 	VY = (1 - LP_VY) * VY + LP_VY * data.angular.y;
@@ -164,8 +168,8 @@ def aruco_callback(data):
 	global x_k_x, x_k_y, x_k_z, P_k_x, P_k_y, P_k_z
 	global sigma_P2_x, sigma_P2_y, sigma_P2_z, sigma_M2_x, sigma_M2_y, sigma_M2_z
 	global v2p
-
-	# aruco_detect_time = rospy.get_time()
+	global autonomy_mode, aruco_detect_time
+	global yaw, yaw_d
 
 	#get position
 	X_t = -data.pose.position.y + 0.125
@@ -194,6 +198,9 @@ def aruco_callback(data):
 
 	# rospy.loginfo('%.3f, %.3f, %.3f, %.3f, %.3f, %.3f', X, Y, Z, phi*180.0/np.pi, theta*180.0/np.pi, psi*180.0/np.pi)
 
+	autonomy_mode = False
+	yaw_d = yaw + psi_t
+
 def Alt_vel_callback(data):
 	global Z_d, X_d, Y_d
 	
@@ -202,9 +209,10 @@ def Alt_vel_callback(data):
 	Z_d 	= -data.z
 
 def yawd_callback(data):
-	global yaw_d
+	global yaw_d, autonomy_mode
 	
-	yaw_d 	= data.data
+	if(autonomy_mode):
+		yaw_d 	= data.data
 
 def Rdo_callback(data):
 	global err_sum_x, err_sum_y, err_sum_z, err_sum_yaw, radio_on,   X_d, Y_d, X, Y
@@ -228,9 +236,40 @@ def constrain(x, a, b):
 		x = b
 	return x
 
+def autonomy_control():
+	global Kp_x, Kp_y, Kp_z, Kd_x, Kd_y, Kd_z, Ki_x, Ki_y, Ki_z,
+	global Kp_yaw, Ki_yaw
+	global err_sum_x, err_sum_y, err_sum_z, err_sum_yaw
+	global X_d, Y_d, Z_d, yaw_d
+	global X, Y, Z, VX, VY, VZ
+	global yaw
+
+	# xd = 0.0
+	# yd = 0.0
+	# zd = 0.0
+	# xdd = Kp_x * (X_d - X) + Kd_x * (xd - VX) + Ki_x * err_sum_x
+	# ydd = Kp_y * (Y_d - Y) + Kd_y * (yd - VY) + Ki_y * err_sum_y
+	# zdd = Kp_z * (Z_d - Z) + Kd_z * (zd - VZ) + Ki_z * err_sum_z
+
+	xd = Kp_x/Kd_x * (X_d - X)
+	yd = Kp_y/Kd_y * (Y_d - Y)
+	zd = Kp_z/Kd_z * (Z_d - Z)
+	xdd = Kd_x * (xd - VX) + Ki_x * err_sum_x
+	ydd = Kd_y * (yd - VY) + Ki_y * err_sum_y
+	zdd = Kd_z * (zd - VZ) + Ki_z * err_sum_z
+
+	r_d	= Kp_yaw * (yaw_d - yaw) + Ki_yaw * err_sum_yaw 
+
+	err_sum_x = constrain(err_sum_x + (xd - VX), -1.0/Ki_x, 1.0/Ki_x)
+	err_sum_y = constrain(err_sum_y + (yd - VY), -1.0/Ki_y, 1.0/Ki_y)
+	err_sum_z = constrain(err_sum_z + (zd - VZ), -10.0/Ki_z, 10.0/Ki_z)
+	err_sum_yaw = constrain(err_sum_yaw + (yaw_d - yaw), -10.0/Ki_yaw, 10.0/Ki_yaw)
+
+	return xdd, ydd, zdd, r_d
+
+
 def main():
-	global Hz, filename, mass, g, Kp_yaw, Kp_x, Kp_y, Kp_z, Ki_yaw, Ki_x, Ki_y, Ki_z, Kd_z, err_sum_x, err_sum_y, err_sum_z, \
-	err_sum_yaw, radio_on, X, Y, Z, VX, VY, VZ, X_d, Y_d, Z_d, yaw_d, yaw, phi_d, theta_d
+	global Hz, filename, mass, g, radio_on
 
 	global x_k_x, x_k_y, x_k_z
 
@@ -259,33 +298,14 @@ def main():
 	# file_write_ctr = 1
 	while not rospy.is_shutdown():
 		try:
+		
+			xdd, ydd, zdd, r_d = autonomy_control()
 
-			# xd = 0.0
-			# yd = 0.0
-			# zd = 0.0
-			# xdd = Kp_x * (X_d - X) + Kd_x * (xd - VX) + Ki_x * err_sum_x
-			# ydd = Kp_y * (Y_d - Y) + Kd_y * (yd - VY) + Ki_y * err_sum_y
-			# zdd = Kp_z * (Z_d - Z) + Kd_z * (zd - VZ) + Ki_z * err_sum_z
-
-			xd = Kp_x/Kd_x * (X_d - X)
-			yd = Kp_y/Kd_y * (Y_d - Y)
-			zd = Kp_z/Kd_z * (Z_d - Z)
-			xdd = Kd_x * (xd - VX) + Ki_x * err_sum_x
-			ydd = Kd_y * (yd - VY) + Ki_y * err_sum_y
-			zdd = Kd_z * (zd - VZ) + Ki_z * err_sum_z
-
-
-
-			r_d	= Kp_yaw * (yaw_d - yaw) + Ki_yaw * err_sum_yaw 
 
 			T_d 	= mass * (g - zdd)
 			theta_d = -xdd/g*np.cos(yaw) - ydd/g*np.sin(yaw)
 			phi_d 	= (ydd/g*np.cos(yaw) - xdd/g*np.sin(yaw))*np.cos(theta_d)		
 
-			err_sum_x = constrain(err_sum_x + (xd - VX), -1.0/Ki_x, 1.0/Ki_x)
-			err_sum_y = constrain(err_sum_y + (yd - VY), -1.0/Ki_y, 1.0/Ki_y)
-			err_sum_z = constrain(err_sum_z + (zd - VZ), -10.0/Ki_z, 10.0/Ki_z)
-			err_sum_yaw = constrain(err_sum_yaw + (yaw_d - yaw), -10.0/Ki_yaw, 10.0/Ki_yaw)
 
 			# no integral without takeoff
 			if(Z > -0.1):
@@ -316,13 +336,13 @@ def main():
 			pub1.publish(states);
 
 
-			out.linear.x 	= Y_t
-			out.linear.y 	= x_k_y[0]
-			out.linear.z 	= v2p
-			out.angular.x 	= 0.0
-			out.angular.y 	= 0.0
-			out.angular.z 	= 0.0
-			pub2.publish(out);
+			# out.linear.x 	= Y_t
+			# out.linear.y 	= x_k_y[0]
+			# out.linear.z 	= v2p
+			# out.angular.x 	= 0.0
+			# out.angular.y 	= 0.0
+			# out.angular.z 	= 0.0
+			# pub2.publish(out);
 
 
 
