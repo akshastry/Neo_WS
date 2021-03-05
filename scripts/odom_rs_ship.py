@@ -106,9 +106,9 @@ F_KF_T = F_KF.T
 
 Q_KF = np.array([[0.25*dt_KF**4, 0.5*dt_KF**3], [0.5*dt_KF**3, dt_KF**2]])
 
-x_k_x = np.zeros(2); P_k_x = 100.0*np.ones((2,2)); sigma_P2_x =  0.3*10**(0.0); sigma_M2_x = 5*10**(-4.0); # 0.3
-x_k_y = np.zeros(2); P_k_y = 100.0*np.ones((2,2)); sigma_P2_y =  4.0*10**(0.0); sigma_M2_y = 5*10**(-4.0); # 4
-x_k_z = np.zeros(2); P_k_z = 100.0*np.ones((2,2)); sigma_P2_z = 30.0*10**(0.0); sigma_M2_z = 5*10**(-4.0); # 30
+x_k_x = np.zeros(2); P_k_x = 10000.0*np.ones((2,2)); sigma_P2_x =  0.3*10**(0.0); sigma_M2_x = 5*10**(-4.0); # 0.3
+x_k_y = np.zeros(2); P_k_y = 10000.0*np.ones((2,2)); sigma_P2_y =  4.0*10**(0.0); sigma_M2_y = 5*10**(-4.0); # 4
+x_k_z = np.zeros(2); P_k_z = 10000.0*np.ones((2,2)); sigma_P2_z = 30.0*10**(0.0); sigma_M2_z = 5*10**(-4.0); # 30
 
 # temporary
 v2p  = 0.0
@@ -200,6 +200,7 @@ def aruco_callback(data):
 	x_k_x, P_k_x = Kalman_Filter(x_k_x, P_k_x, 0.0, X_t + X, sigma_P2_x, sigma_M2_x)
 	x_k_y, P_k_y = Kalman_Filter(x_k_y, P_k_y, 0.0, Y_t + Y, sigma_P2_y, sigma_M2_y)
 	x_k_z, P_k_z = Kalman_Filter(x_k_z, P_k_z, 0.0, Z_t + Z, sigma_P2_z, sigma_M2_z)
+	# print (P_k_z)
 
 	meas = Z_t + Z
 	v2p = v2p + x_k_z[1] * dt_KF
