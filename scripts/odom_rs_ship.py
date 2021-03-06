@@ -47,8 +47,18 @@ err_sum_y = 0.0
 err_sum_z = 0.0
 err_sum_yaw = 0.0
 
+#
+Kp_x_t = 4.0
+Kp_y_t = 4.0
+Kp_z_t = 5.0
 
+Kd_x_t = 5.5
+Kd_y_t = 5.5
+Kd_z_t = 5.0
 
+Ki_x_t = 0.001
+Ki_y_t = 0.001
+Ki_z_t = 0.01
 
 
 # desired
@@ -56,6 +66,10 @@ X_d = 0.0;
 Y_d = 0.0;
 Z_d = -1.5;
 yaw_d 	= 0.0;
+
+Xdot_d = 0.0
+Ydot_d = 0.0
+Zdot_d = 0.0
 
 
 # states
@@ -106,10 +120,10 @@ F_KF_T = F_KF.T
 
 Q_KF = np.array([[0.25*dt_KF**4, 0.5*dt_KF**3], [0.5*dt_KF**3, dt_KF**2]])
 
-x_k_x = np.zeros(2); P_k_x = 10000.0*np.ones((2,2)); sigma_P2_x =  0.3*10**(0.0); sigma_M2_x = 5*10**(-4.0); # 0.3
-x_k_y = np.zeros(2); P_k_y = 10000.0*np.ones((2,2)); sigma_P2_y =  4.0*10**(0.0); sigma_M2_y = 5*10**(-4.0); # 4
-x_k_z = np.zeros(2); P_k_z = 10000.0*np.ones((2,2)); sigma_P2_z = 30.0*10**(0.0); sigma_M2_z = 5*10**(-4.0); # 30
-
+x_k_x = np.zeros(2); P_k_x = (10.0**0.0)*np.ones((2,2)); sigma_M2_x = 25*10**(-6.0); sigma_P2_x =  30.0*10**(-6.0);
+x_k_y = np.zeros(2); P_k_y = (10.0**0.0)*np.ones((2,2)); sigma_M2_y = 25*10**(-6.0); sigma_P2_y =  40.0*10**(-6.0);
+x_k_z = np.zeros(2); P_k_z = (10.0**0.0)*np.ones((2,2)); sigma_M2_z = 25*10**(-6.0); sigma_P2_z = 30.0*10**(-6.0);
+x_k_z[0] = 1.5
 # temporary
 v2p  = 0.0
 meas = 0.0
@@ -119,6 +133,19 @@ autonomy_mode = True
 
 # initializing aruco_detect_time
 aruco_detect_time = 0.0
+
+#temp maybe
+X_t_F = 0.0
+Y_t_F = 0.0
+Z_t_F = 0.0
+
+X_t_LP = 0.0
+Y_t_LP = 0.0
+Z_t_LP = 0.0
+
+VX_t = 0.0
+VY_t = 0.0
+VZ_t = 0.0
 
 def pos_vel_callback(data):
 	global X, Y, Z, VX, VY, VZ, yaw, pitch
@@ -165,23 +192,47 @@ def Kalman_Filter(x_k, P_k, u_k, z_k, sigma_P2, sigma_M2):
     return x_k, P_k
 
 def aruco_callback(data):
-	global X_t, Y_t, Z_t, phi_t, theta_t, psi_t
+	global X_t, Y_t, Z_t, phi_t, theta_t, psi_t,    X_t_F, Y_t_F, Z_t_F
 	global x_k_x, x_k_y, x_k_z, P_k_x, P_k_y, P_k_z
 	global sigma_P2_x, sigma_P2_y, sigma_P2_z, sigma_M2_x, sigma_M2_y, sigma_M2_z
 	global v2p
 	global autonomy_mode, aruco_detect_time
 	global X, Y, Z, roll, pitch, yaw
 	global yaw, yaw_d
+	global X_d, Y_d, Z_d
+	global Xdot_d, Ydot_d, Zdot_d
+
+	global VX_t, VY_t, VZ_t
 
 	global meas
+
+	dt = rospy.get_time() - aruco_detect_time
+	aruco_detect_time = rospy.get_time()
+	
+	if(dt <= 1/15 and aruco_detect_time != 0 ):
+		VX_t = (-data.pose.position.y + 0.125 - X_t) / dt 
+		VY_t = (data.pose.position.x 		  - Y_t) / dt
+		VZ_t = (data.pose.position.z 		  - Z_t) / dt
+
 
 	#get position
 	X_t = -data.pose.position.y + 0.125
 	Y_t = data.pose.position.x
 	Z_t = data.pose.position.z
 
-	in2bdy = R.from_euler('ZYX', [yaw, pitch, roll])
-	X_t, Y_t, Z_t = in2bdy.apply([X_t, Y_t, Z_t])
+
+
+
+
+	# in2bdy = R.from_euler('ZYX', [yaw, pitch, roll])
+	# X_t, Y_t, Z_t = in2bdy.apply([X_t, Y_t, Z_t])
+
+
+
+
+	# X_t_F = (1 - 1) * X_t_F + 1 * (X_t + X)
+	# Y_t_F = (1 - 1) * Y_t_F + 1 * (Y_t + Y)
+	# Z_t_F = (1 - 1) * Z_t_F + 1 * (Z_t + Z)
 
 	#get orientation
 	q0 = data.pose.orientation.w
@@ -197,26 +248,36 @@ def aruco_callback(data):
 	psi_t, theta_t, phi_t = bdy2trgt.as_euler('ZYX')
 
 	#filter position
-	x_k_x, P_k_x = Kalman_Filter(x_k_x, P_k_x, 0.0, X_t + X, sigma_P2_x, sigma_M2_x)
-	x_k_y, P_k_y = Kalman_Filter(x_k_y, P_k_y, 0.0, Y_t + Y, sigma_P2_y, sigma_M2_y)
-	x_k_z, P_k_z = Kalman_Filter(x_k_z, P_k_z, 0.0, Z_t + Z, sigma_P2_z, sigma_M2_z)
-	# print (P_k_z)
+	x_k_x, P_k_x = Kalman_Filter(x_k_x, P_k_x, 0.0, X_t, sigma_P2_x, sigma_M2_x)
+	x_k_y, P_k_y = Kalman_Filter(x_k_y, P_k_y, 0.0, Y_t, sigma_P2_y, sigma_M2_y)
+	x_k_z, P_k_z = Kalman_Filter(x_k_z, P_k_z, 0.0, Z_t, sigma_P2_z, sigma_M2_z)
+	
 
 	meas = Z_t + Z
 	v2p = v2p + x_k_z[1] * dt_KF
 
 	# rospy.loginfo('%.3f, %.3f, %.3f, %.3f, %.3f, %.3f', X, Y, Z, phi*180.0/np.pi, theta*180.0/np.pi, psi*180.0/np.pi)
 
-	autonomy_mode = False
-	yaw_d = (1 - 0.6) * yaw_d + 0.6 * (yaw + psi_t)
+	# autonomy_mode = False
+	# yaw_d 	= (1 - 0.6) * yaw_d + 0.6 * (yaw + psi_t)
+	
+	# X_d 	= x_k_x[0]
+	# Y_d   	= x_k_y[0]
+
+	# Xdot_d 	= x_k_x[1] #(1 - 0.1) * Xdot_d + 0.1 * (x_k_x[1]) 
+	# Ydot_d 	= x_k_y[1] #(1 - 0.1) * Ydot_d + 0.1 * (x_k_y[1])
+	
+	
 
 
 def Alt_vel_callback(data):
 	global Z_d, X_d, Y_d
 	
-	X_d 	= data.x
-	Y_d 	= data.y
 	Z_d 	= -data.z
+
+	if(autonomy_mode):
+		X_d 	= data.x
+		Y_d 	= data.y	
 
 def yawd_callback(data):
 	global yaw_d, autonomy_mode
@@ -253,26 +314,35 @@ def autonomy_control():
 	global X_d, Y_d, Z_d, yaw_d
 	global X, Y, Z, VX, VY, VZ
 	global yaw
+	global Xdot_d, Ydot_d, Zdot_d
+	global aruco_detect_time
 
-	# xd = 0.0
-	# yd = 0.0
-	# zd = 0.0
-	# xdd = Kp_x * (X_d - X) + Kd_x * (xd - VX) + Ki_x * err_sum_x
-	# ydd = Kp_y * (Y_d - Y) + Kd_y * (yd - VY) + Ki_y * err_sum_y
-	# zdd = Kp_z * (Z_d - Z) + Kd_z * (zd - VZ) + Ki_z * err_sum_z
+	if(rospy.get_time() - aruco_detect_time > 1/15.0):
+		Xdot_d = 0.0
+		Ydot_d = 0.0
+		Zdot_d = 0.0
 
-	xd = Kp_x/Kd_x * (X_d - X)
-	yd = Kp_y/Kd_y * (Y_d - Y)
-	zd = Kp_z/Kd_z * (Z_d - Z)
-	xdd = Kd_x * (xd - VX) + Ki_x * err_sum_x
-	ydd = Kd_y * (yd - VY) + Ki_y * err_sum_y
-	zdd = Kd_z * (zd - VZ) + Ki_z * err_sum_z
+	if (autonomy_mode):
+		xdd = Kp_x * (X_d - X) + Kd_x * (Xdot_d - VX) + Ki_x * err_sum_x
+		ydd = Kp_y * (Y_d - Y) + Kd_y * (Ydot_d - VY) + Ki_y * err_sum_y
+	else:
+		xdd = Kp_x_t * (X_d - X) + Kd_x_t * (Xdot_d - VX) + Ki_x_t * err_sum_x
+		ydd = Kp_y_t * (Y_d - Y) + Kd_y_t * (Ydot_d - VY) + Ki_y_t * err_sum_y
+
+	zdd = Kp_z * (Z_d - Z) + Kd_z * (Zdot_d - VZ) + Ki_z * err_sum_z
+
+	# xd = Kp_x/Kd_x * (X_d - X)
+	# yd = Kp_y/Kd_y * (Y_d - Y)
+	# zd = Kp_z/Kd_z * (Z_d - Z)
+	# xdd = Kd_x * (xd - VX) + Ki_x * err_sum_x
+	# ydd = Kd_y * (yd - VY) + Ki_y * err_sum_y
+	# zdd = Kd_z * (zd - VZ) + Ki_z * err_sum_z
 
 	r_d	= Kp_yaw * (yaw_d - yaw) + Ki_yaw * err_sum_yaw 
 
-	err_sum_x = constrain(err_sum_x + (xd - VX), -1.0/Ki_x, 1.0/Ki_x)
-	err_sum_y = constrain(err_sum_y + (yd - VY), -1.0/Ki_y, 1.0/Ki_y)
-	err_sum_z = constrain(err_sum_z + (zd - VZ), -10.0/Ki_z, 10.0/Ki_z)
+	err_sum_x = constrain(err_sum_x + (Xdot_d - VX), -1.0/Ki_x, 1.0/Ki_x)
+	err_sum_y = constrain(err_sum_y + (Ydot_d - VY), -1.0/Ki_y, 1.0/Ki_y)
+	err_sum_z = constrain(err_sum_z + (Zdot_d - VZ), -10.0/Ki_z, 10.0/Ki_z)
 	err_sum_yaw = constrain(err_sum_yaw + (yaw_d - yaw), -10.0/Ki_yaw, 10.0/Ki_yaw)
 
 	return xdd, ydd, zdd, r_d
@@ -283,7 +353,7 @@ def main():
 
 	global x_k_x, x_k_y, x_k_z
 
-	global meas, v2p, yaw_d, psi_t
+	global meas, v2p, yaw_d, psi_t, X_t_F, Y_t_F, Z_t_F, X, VX_t, VY_t, VZ_t
 
 	ctrl 	= Twist();
 	states 	= Twist();
@@ -331,14 +401,14 @@ def main():
 			ctrl.linear.x 	= radio_on
 			ctrl.linear.y 	= 0.0
 			ctrl.linear.z 	= constrain(T_d * Thrust_sf, 0.0, 3.0)
-			ctrl.angular.x 	= constrain(phi_d * 180.0/np.pi, -15.0, 15.0) 
-			ctrl.angular.y 	= constrain(theta_d * 180.0/np.pi, -15.0, 15.0)
+			ctrl.angular.x 	= constrain(phi_d * 180.0/np.pi, -25.0, 25.0) 
+			ctrl.angular.y 	= constrain(theta_d * 180.0/np.pi, -25.0, 25.0)
 			ctrl.angular.z 	= constrain(r_d * 180.0/np.pi, -60, 60)
 			pub.publish(ctrl);
 
 
 			states.linear.x 	= x_k_x[0]
-			states.linear.y 	= x_k_y[0]
+			states.linear.y 	= VX_t
 			states.linear.z 	= x_k_z[0]
 			states.angular.x 	= x_k_x[1]
 			states.angular.y 	= x_k_y[1]
@@ -346,12 +416,12 @@ def main():
 			pub1.publish(states);
 
 
-			out.linear.x 	= meas
-			out.linear.y 	= x_k_z[0]
-			out.linear.z 	= v2p
-			out.angular.x 	= yaw_d * 180.0/np.pi
-			out.angular.y 	= psi_t * 180.0/np.pi
-			out.angular.z 	= 0.0
+			out.linear.x 	= X#roll*180.0/np.pi#meas
+			out.linear.y 	= pitch*180.0/np.pi#x_k_z[0]
+			out.linear.z 	= yaw*180.0/np.pi#v2p
+			out.angular.x 	= 0.0#yaw_d * 180.0/np.pi
+			out.angular.y 	= 0.0#psi_t * 180.0/np.pi
+			out.angular.z 	= 0.0#0.0
 			pub2.publish(out);
 
 
