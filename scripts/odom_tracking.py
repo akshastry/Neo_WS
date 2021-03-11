@@ -47,29 +47,25 @@ err_sum_y = 0.0
 err_sum_z = 0.0
 err_sum_yaw = 0.0
 
-#
-Kp_x_t = 4.0
-Kp_y_t = 4.0
-Kp_z_t = 5.0
+# #
+# Kp_x_t = 4.0
+# Kp_y_t = 4.0
+# Kp_z_t = 5.0
 
-Kd_x_t = 5.5
-Kd_y_t = 5.5
-Kd_z_t = 5.0
+# Kd_x_t = 5.5
+# Kd_y_t = 5.5
+# Kd_z_t = 5.0
 
-Ki_x_t = 0.001
-Ki_y_t = 0.001
-Ki_z_t = 0.01
+# Ki_x_t = 0.001
+# Ki_y_t = 0.001
+# Ki_z_t = 0.01
 
 
 # desired
 X_d = 0.0;
 Y_d = 0.0;
-Z_d = -1.0;
+Z_d = -1.5;
 yaw_d 	= 0.0;
-
-Xdot_d = 0.0
-Ydot_d = 0.0
-Zdot_d = 0.0
 
 
 # states
@@ -112,40 +108,11 @@ phi_t 	= 0.0;
 theta_t = 0.0;
 psi_t 	= 0.0;
 
-# Kalman
-dt_KF 	= 1.0/30.0
-
-F_KF = np.array([[1.0, dt_KF], [0.0, 1.0]])
-F_KF_T = F_KF.T
-
-Q_KF = np.array([[0.25*dt_KF**4, 0.5*dt_KF**3], [0.5*dt_KF**3, dt_KF**2]])
-
-x_k_x = np.zeros(2); P_k_x = (10.0**0.0)*np.ones((2,2)); sigma_M2_x = 25.0*10**(-6.0); sigma_P2_x =  30.0*10**(-6.0);
-x_k_y = np.zeros(2); P_k_y = (10.0**0.0)*np.ones((2,2)); sigma_M2_y = 25.0*10**(-6.0); sigma_P2_y =  40.0*10**(-6.0);
-x_k_z = np.zeros(2); P_k_z = (10.0**0.0)*np.ones((2,2)); sigma_M2_z = 25.0*10**(-6.0); sigma_P2_z = 30.0*10**(-6.0);
-x_k_z[0] = 1.5
-# temporary
-v2p  = 0.0
-meas = 0.0
-
 # autonomy mode or aruco mode
 autonomy_mode = True
 
 # initializing aruco_detect_time
 aruco_detect_time = 0.0
-
-#temp maybe
-X_t_F = 0.0
-Y_t_F = 0.0
-Z_t_F = 0.0
-
-X_t_LP = 0.0
-Y_t_LP = 0.0
-Z_t_LP = 0.0
-
-VX_t = 0.0
-VY_t = 0.0
-VZ_t = 0.0
 
 def pos_vel_callback(data):
 	global X, Y, Z, VX, VY, VZ, yaw, pitch
@@ -165,119 +132,18 @@ def att_callback(data):
 	pitch 	= (1 - LP_pitch) * pitch + LP_pitch * data.y
 	roll 	= (1 - LP_roll)  * roll  + LP_roll 	* data.x
 
-def Kalman_Filter(x_k, P_k, u_k, z_k, sigma_P2, sigma_M2):
-    global F_KF, F_KF_T, Q_KF, dt_KF
-
-    x_k[0] = F_KF[0,0] * x_k[0] + F_KF[0,1] * x_k[1] + 0.5*dt_KF**2 * u_k
-    x_k[1] = F_KF[1,0] * x_k[0] + F_KF[1,1] * x_k[1] + dt_KF * u_k
-
-    P_k  = np.matmul(np.matmul(F_KF, P_k), F_KF_T)
-    P_k1 = P_k + Q_KF * sigma_P2
-
-    y_tilda = z_k - x_k[0]
-    S_k = P_k1[0,0] + sigma_M2
-
-    K_KF = np.zeros(2)
-    K_KF[0] = P_k1[0,0]/S_k
-    K_KF[1] = P_k1[1,0]/S_k
-
-    x_k[0] = x_k[0] + K_KF[0] * y_tilda
-    x_k[1] = x_k[1] + K_KF[1] * y_tilda
-
-    P_k[0][0] = (1.0 - K_KF[0])*P_k1[0][0] + 0.0 * P_k1[1][0]  
-    P_k[0][1] = (1.0 - K_KF[0])*P_k1[0][1] + 0.0 * P_k1[1][1] 
-    P_k[1][0] = 	 - K_KF[1] *P_k1[0][0] + 1.0 * P_k1[1][0]
-    P_k[1][1] = 	 - K_KF[1] *P_k1[0][1] + 1.0 * P_k1[1][1]
-
-    return x_k, P_k
-
-def Kalman_Filter1(x_k, P_k, u_k, z_k, sigma_P2, sigma_M2, dt1):
-
-	F_KF = np.array([[1.0, dt1], [0.0, 1.0]])
-	F_KF_T = F_KF.T
-
-	Q_KF = np.array([[0.25*dt1**4, 0.5*dt1**3], [0.5*dt1**3, dt1**2]])	
-
-	x_k[0] = F_KF[0,0] * x_k[0] + F_KF[0,1] * x_k[1] + 0.5*dt_KF**2 * u_k
-	x_k[1] = F_KF[1,0] * x_k[0] + F_KF[1,1] * x_k[1] + dt_KF * u_k
-
-	P_k  = np.matmul(np.matmul(F_KF, P_k), F_KF_T)
-	P_k1 = P_k + Q_KF * sigma_P2
-
-	y_tilda = z_k - x_k[0]
-	S_k = P_k1[0,0] + sigma_M2
-
-	K_KF = np.zeros(2)
-	K_KF[0] = P_k1[0,0]/S_k
-	K_KF[1] = P_k1[1,0]/S_k
-
-	x_k[0] = x_k[0] + K_KF[0] * y_tilda
-	x_k[1] = x_k[1] + K_KF[1] * y_tilda
-
-	P_k[0][0] = (1.0 - K_KF[0])*P_k1[0][0] + 0.0 * P_k1[1][0]  
-	P_k[0][1] = (1.0 - K_KF[0])*P_k1[0][1] + 0.0 * P_k1[1][1] 
-	P_k[1][0] = 	 - K_KF[1] *P_k1[0][0] + 1.0 * P_k1[1][0]
-	P_k[1][1] = 	 - K_KF[1] *P_k1[0][1] + 1.0 * P_k1[1][1]
-
-	return x_k, P_k
-
 def aruco_callback(data):
-	global X_t, Y_t, Z_t, phi_t, theta_t, psi_t,    X_t_F, Y_t_F, Z_t_F
-	global x_k_x, x_k_y, x_k_z, P_k_x, P_k_y, P_k_z
-	global sigma_P2_x, sigma_P2_y, sigma_P2_z, sigma_M2_x, sigma_M2_y, sigma_M2_z
-	global v2p
+	global X_t, Y_t, Z_t, phi_t, theta_t, psi_t
 	global autonomy_mode, aruco_detect_time
-	global X, Y, Z, roll, pitch, yaw
-	global yaw, yaw_d
-	global X_d, Y_d, Z_d
-	global Xdot_d, Ydot_d, Zdot_d
 
-	global VX_t, VY_t, VZ_t
-
-	global meas
-
-	dt1 = rospy.get_time() - aruco_detect_time
-
+	# dt1 = rospy.get_time() - aruco_detect_stime
 	aruco_detect_time = rospy.get_time()
-	
-	if(dt1 <= 1.0/10.0):
-		VX_t = (-data.pose.position.y + 0.125 - X_t) / dt1 
-		VY_t = (data.pose.position.x 		  - Y_t) / dt1
-		VZ_t = (data.pose.position.z 		  - Z_t) / dt1
 
 
 	#get position
 	X_t = -data.pose.position.y + 0.125
 	Y_t = data.pose.position.x
 	Z_t = data.pose.position.z
-
-	if(dt1 <= 1.0/10.0):
-		# print(dt1)
-		#filter position
-		x_k_x, P_k_x = Kalman_Filter1(x_k_x, P_k_x, 0.0, X_t, sigma_P2_x, sigma_M2_x, dt1)
-		x_k_y, P_k_y = Kalman_Filter1(x_k_y, P_k_y, 0.0, Y_t, sigma_P2_y, sigma_M2_y, dt1)
-		x_k_z, P_k_z = Kalman_Filter1(x_k_z, P_k_z, 0.0, Z_t, sigma_P2_z, sigma_M2_z, dt1)
-	else:
-		x_k_x[0] = X_t
-		x_k_y[0] = Y_t
-		x_k_z[0] = Z_t
-		x_k_x[1] = 0.0
-		x_k_y[1] = 0.0
-		x_k_z[1] = 0.0
-
-
-
-
-
-	# in2bdy = R.from_euler('ZYX', [yaw, pitch, roll])
-	# X_t, Y_t, Z_t = in2bdy.apply([X_t, Y_t, Z_t])
-
-
-
-
-	# X_t_F = (1 - 1) * X_t_F + 1 * (X_t + X)
-	# Y_t_F = (1 - 1) * Y_t_F + 1 * (Y_t + Y)
-	# Z_t_F = (1 - 1) * Z_t_F + 1 * (Z_t + Z)
 
 	#get orientation
 	q0 = data.pose.orientation.w
@@ -292,40 +158,22 @@ def aruco_callback(data):
 	bdy2trgt = bdy2cmra * cmra2mrkr * mrkr2trgt
 	psi_t, theta_t, phi_t = bdy2trgt.as_euler('ZYX')
 
+	autonomy_mode = False
+
+# def Alt_vel_callback(data):
+# 	global Z_d, X_d, Y_d
 	
-	
+# 	Z_d 	= -data.z
 
-	meas = Z_t + Z
-	v2p = v2p + x_k_z[1] * dt_KF
+# 	if(autonomy_mode):
+# 		X_d 	= data.x
+# 		Y_d 	= data.y	
 
-	# rospy.loginfo('%.3f, %.3f, %.3f, %.3f, %.3f, %.3f', X, Y, Z, phi*180.0/np.pi, theta*180.0/np.pi, psi*180.0/np.pi)
+# def yawd_callback(data):
+# 	global yaw_d, autonomy_mode
 
-	# autonomy_mode = False
-	# yaw_d 	= (1 - 0.6) * yaw_d + 0.6 * (yaw + psi_t)
-	
-	# X_d 	= x_k_x[0]
-	# Y_d   	= x_k_y[0]
-
-	# Xdot_d 	= x_k_x[1] #(1 - 0.1) * Xdot_d + 0.1 * (x_k_x[1]) 
-	# Ydot_d 	= x_k_y[1] #(1 - 0.1) * Ydot_d + 0.1 * (x_k_y[1])
-	
-	
-
-
-def Alt_vel_callback(data):
-	global Z_d, X_d, Y_d
-	
-	Z_d 	= -data.z
-
-	if(autonomy_mode):
-		X_d 	= data.x
-		Y_d 	= data.y	
-
-def yawd_callback(data):
-	global yaw_d, autonomy_mode
-
-	if(autonomy_mode):
-		yaw_d 	= data.data
+# 	if(autonomy_mode):
+# 		yaw_d 	= data.data
 
 def Rdo_callback(data):
 	global err_sum_x, err_sum_y, err_sum_z, err_sum_yaw, radio_on,   X_d, Y_d, X, Y
@@ -359,36 +207,37 @@ def autonomy_control():
 	global Xdot_d, Ydot_d, Zdot_d
 	global aruco_detect_time
 
-	if(rospy.get_time() - aruco_detect_time > 1/15.0):
-		Xdot_d = 0.0
-		Ydot_d = 0.0
-		Zdot_d = 0.0
+	if(rospy.get_time() - aruco_detect_time > 1/12.0 and autonomy_mode == False):
+		X_d = X_t + X
+		Y_d = Y_t + Y
+		autonomy_mode = True
 
 	if (autonomy_mode):
-		xdd = Kp_x * (X_d - X) + Kd_x * (Xdot_d - VX) + Ki_x * err_sum_x
-		ydd = Kp_y * (Y_d - Y) + Kd_y * (Ydot_d - VY) + Ki_y * err_sum_y
+		xd = Kp_x/Kd_x * (X_d - X)
+		yd = Kp_y/Kd_y * (Y_d - Y)
+		zd = Kp_z/Kd_z * (Z_d - Z)
+		r_d	= Kp_yaw * (yaw_d - yaw) + Ki_yaw * err_sum_yaw
+		err_sum_yaw = constrain(err_sum_yaw + (yaw_d - yaw), -10.0/Ki_yaw, 10.0/Ki_yaw)
 	else:
-		xdd = Kp_x_t * (X_d - X) + Kd_x_t * (Xdot_d - VX) + Ki_x_t * err_sum_x
-		ydd = Kp_y_t * (Y_d - Y) + Kd_y_t * (Ydot_d - VY) + Ki_y_t * err_sum_y
+		xd = Kp_x/Kd_x * (X_t)
+		yd = Kp_y/Kd_y * (Y_t)
+		zd = Kp_z/Kd_z * (Z_d - Z)
+		r_d	= Kp_yaw * (yaw_d - yaw) + Ki_yaw * err_sum_yaw
+		err_sum_yaw = constrain(err_sum_yaw + (yaw_d - yaw), -10.0/Ki_yaw, 10.0/Ki_yaw)
+		if(X_t**2.0 + Y_t **2.0 < 0.03**2.0):
+			print('Should Land')
 
-	zdd = Kp_z * (Z_d - Z) + Kd_z * (Zdot_d - VZ) + Ki_z * err_sum_z
+	xdd = Kd_x * (xd - VX) + Ki_x * err_sum_x
+	ydd = Kd_y * (yd - VY) + Ki_y * err_sum_y
+	zdd = Kd_z * (zd - VZ) + Ki_z * err_sum_z
 
-	# xd = Kp_x/Kd_x * (X_d - X)
-	# yd = Kp_y/Kd_y * (Y_d - Y)
-	# zd = Kp_z/Kd_z * (Z_d - Z)
-	# xdd = Kd_x * (xd - VX) + Ki_x * err_sum_x
-	# ydd = Kd_y * (yd - VY) + Ki_y * err_sum_y
-	# zdd = Kd_z * (zd - VZ) + Ki_z * err_sum_z
 
-	r_d	= Kp_yaw * (yaw_d - yaw) + Ki_yaw * err_sum_yaw 
-
-	err_sum_x = constrain(err_sum_x + (Xdot_d - VX), -1.0/Ki_x, 1.0/Ki_x)
-	err_sum_y = constrain(err_sum_y + (Ydot_d - VY), -1.0/Ki_y, 1.0/Ki_y)
-	err_sum_z = constrain(err_sum_z + (Zdot_d - VZ), -10.0/Ki_z, 10.0/Ki_z)
-	err_sum_yaw = constrain(err_sum_yaw + (yaw_d - yaw), -10.0/Ki_yaw, 10.0/Ki_yaw)
+	err_sum_x = constrain(err_sum_x + (xd - VX), -1.0/Ki_x, 1.0/Ki_x)
+	err_sum_y = constrain(err_sum_y + (yd - VY), -1.0/Ki_y, 1.0/Ki_y)
+	err_sum_z = constrain(err_sum_z + (zd - VZ), -10.0/Ki_z, 10.0/Ki_z)
+	
 
 	return xdd, ydd, zdd, r_d
-
 
 def main():
 	global Hz, filename, mass, g, radio_on
@@ -430,7 +279,7 @@ def main():
 
 
 			# no integral without takeoff
-			if(Z > -0.1):
+			if(Z > -0.005):
 				err_sum_z = 0.0
 				err_sum_y = 0.0
 				err_sum_x = 0.0
