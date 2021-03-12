@@ -109,6 +109,8 @@ phi_t 	= 0.0;
 theta_t = 0.0;
 psi_t 	= 0.0;
 
+r_t = 0.01 #radius of convergence on target
+V_t = 0.01  #velocity radius of convergence on target
 # autonomy mode or aruco mode
 autonomy_mode = True
 
@@ -151,7 +153,7 @@ def aruco_callback(data):
 	X_d = X_t + X
 	Y_d = Y_t + Y
 	Z_d = (Z_t - H_t) + Z
-	print(Z_d)
+	# print(Z_d)
 
 
 	#get orientation
@@ -221,7 +223,7 @@ def autonomy_control():
 	global aruco_detect_time, autonomy_mode
 	global X_t, Y_t, Z_t, psi_t, H_t
 
-	# print(rospy.get_time() - aruco_detect_time)
+
 	if(rospy.get_time() - aruco_detect_time > 1.0/10.0 and autonomy_mode == False):
 		# print('entering autonomy_mode')
 		# X_d = X_t + X
@@ -229,11 +231,13 @@ def autonomy_control():
 		autonomy_mode = True
 
 	if (autonomy_mode):
-		xd = Kp_x/Kd_x * (X_d - X)
-		yd = Kp_y/Kd_y * (Y_d - Y)
-		zd = Kp_z/Kd_z * (Z_d - Z)
+		xd  = Kp_x/Kd_x * (X_d - X)
+		yd  = Kp_y/Kd_y * (Y_d - Y)
+		zd  = Kp_z/Kd_z * (Z_d - Z)
 		r_d	= Kp_yaw * (yaw_d - yaw) + Ki_yaw * err_sum_yaw
 
+		xd = constrain(xd, -0.5, 0.5)
+		yd = constrain(yd, -0.5, 0.5)
 		zd = constrain(zd, -0.5, 0.5)
 
 		xdd = Kd_x * (xd - VX) + Ki_x * err_sum_x
@@ -245,11 +249,18 @@ def autonomy_control():
 		err_sum_z 	= constrain(err_sum_z + (zd - VZ), -10.0/Ki_z, 10.0/Ki_z)
 		err_sum_yaw = constrain(err_sum_yaw + (yaw_d - yaw), -10.0/Ki_yaw, 10.0/Ki_yaw)
 	else:
+		if(X_t**2.0 + Y_t**2.0 <= r_t**2.0 and VX**2.0 + VY**2.0 + VZ**2.0 <= V_t**2.0):
+			print('landing')
+			H_t = 0.5
+		rospy.loginfo('%f, %f', X_t**2.0 + Y_t**2.0,  VX**2.0 + VY**2.0 + VZ**2.0)
+
 		xd = Kp_x_t/Kd_x_t * (X_t)
 		yd = Kp_y_t/Kd_y_t * (Y_t)
 		zd = Kp_z_t/Kd_z_t * (Z_t - H_t)
 		r_d	= Kp_yaw * (yaw_d - yaw) + Ki_yaw * err_sum_yaw
 
+		xd = constrain(xd, -0.5, 0.5)
+		yd = constrain(yd, -0.5, 0.5)
 		zd = constrain(zd, -0.5, 0.5)
 
 		xdd = Kd_x_t * (xd - VX) + Ki_x_t * err_sum_x
