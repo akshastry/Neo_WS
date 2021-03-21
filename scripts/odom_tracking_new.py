@@ -2,7 +2,7 @@
 
 #python imports
 import time
-from math import sqrt
+import math
 import traceback
 import numpy as np
 from scipy.spatial.transform import Rotation as R
@@ -47,6 +47,12 @@ err_sum_y = 0.0
 err_sum_z = 0.0
 err_sum_yaw = 0.0
 
+err_sum_xint = 0.0
+err_sum_yint = 0.0
+
+Ki_xint = 0.00035
+Ki_yint = 0.001
+
 #
 Kp_x_t = 4.0
 Kp_y_t = 4.0
@@ -56,15 +62,15 @@ Kd_x_t = 5.5
 Kd_y_t = 5.5
 Kd_z_t = 5.0
 
-Ki_x_t = 0.0001
-Ki_y_t = 0.0001
+Ki_x_t = 0.001
+Ki_y_t = 0.001
 Ki_z_t = 0.01
 
 
 # desired
 X_d = 0.0;
 Y_d = 0.0;
-Z_d = -1.0;
+Z_d = -1.2;
 yaw_d 	= 0.0;
 
 
@@ -104,21 +110,25 @@ dt 		= 1.0/(1.0*Hz)
 X_t = 0.0; 
 Y_t = 0.0; 
 Z_t = 0.0;
-H_t = 1.0; # hieght above the marker to park the vehicle
+dX_t = 0.1;
+dY_t = 0.0;
+dZ_t = 0.9; # hieght above the marker to park the vehicle
 phi_t 	= 0.0;
 theta_t = 0.0;
 psi_t 	= 0.0;
 
-r_t = 0.04 #radius of convergence on target
-V_t = 0.05 #velocity radius of convergence on target
 # autonomy mode or aruco mode
 autonomy_mode = True
 
 # initializing aruco_detect_time
 aruco_detect_time = 0.0
 
+# T265_detect time
+pose_received_time = 0.0
+
 def pos_vel_callback(data):
 	global X, Y, Z, VX, VY, VZ, yaw, pitch
+	global pose_received_time
 
 	# 0.155m is the distance of t265 from quad center of mass
 	X = (1.0 - LP_X) * X + LP_X * (data.linear.x + 0.155*(1-np.cos(yaw)) + 0.155*(1-np.cos(pitch)));
@@ -129,6 +139,8 @@ def pos_vel_callback(data):
 	VY = (1.0 - LP_VY) * VY + LP_VY * data.angular.y;
 	VZ = (1.0 - LP_VZ) * VZ + LP_VZ * data.angular.z;
 
+	pose_received_time = rospy.get_time()
+
 def att_callback(data):
 	global yaw, pitch, roll, LP_yaw, LP_pitch, LP_roll
 	yaw 	= (1 - LP_yaw) 	 * yaw 	 + LP_yaw 	* data.z
@@ -136,7 +148,8 @@ def att_callback(data):
 	roll 	= (1 - LP_roll)  * roll  + LP_roll 	* data.x
 
 def aruco_callback(data):
-	global X_t, Y_t, Z_t, phi_t, theta_t, psi_t, H_t
+	global X_t, Y_t, Z_t, phi_t, theta_t, psi_t
+	global dX_t, dY_t, dZ_t
 	global autonomy_mode, aruco_detect_time
 	global X_d, Y_d, Z_d, yaw_d
 	global X, Y, Z, yaw
@@ -146,13 +159,17 @@ def aruco_callback(data):
 
 
 	#get position
-	X_t = -data.pose.position.y + 0.125
-	Y_t = data.pose.position.x
-	Z_t = data.pose.position.z
+	# X_t = -data.pose.position.y# + 0.125
+	# Y_t = data.pose.position.x
+	# Z_t = data.pose.position.z
+	X_t = (1 - 0.5) * X_t + 0.5 * (-data.pose.position.y)
+	Y_t = (1 - 0.5) * Y_t + 0.5 * data.pose.position.x
+	Z_t = (1 - 0.5) * Z_t + 0.5 * data.pose.position.z
 
-	X_d = X_t + X
-	Y_d = Y_t + Y
-	Z_d = (Z_t - H_t) + Z
+	# X_d = (1 - 0.5) * X_d + 0.5 * ((X_t - dX_t) + X)
+	X_d = (X_t - dX_t) + X
+	Y_d = (Y_t - dY_t) + Y
+	Z_d = (Z_t - dZ_t) + Z
 	# print(Z_d)
 
 
@@ -169,7 +186,7 @@ def aruco_callback(data):
 	bdy2trgt = bdy2cmra * cmra2mrkr * mrkr2trgt
 	psi_t, theta_t, phi_t = bdy2trgt.as_euler('ZYX')
 
-	yaw_d = (1 - 0.7) * yaw_d + 0.7 * (yaw + psi_t)
+	yaw_d = (1 - 0.5) * yaw_d + 0.5 * (yaw + psi_t)
 	# print(yaw_d*180.0/np.pi)
 
 	autonomy_mode = False
@@ -221,10 +238,12 @@ def autonomy_control():
 	global X, Y, Z, VX, VY, VZ
 	global yaw
 	global aruco_detect_time, autonomy_mode
-	global X_t, Y_t, Z_t, psi_t, H_t
+	global X_t, Y_t, Z_t, psi_t
+	global dX_t, dY_t, dZ_t
 
-	land_flag = False
-	
+	global err_sum_xint, err_sum_yint, Ki_xint, Ki_yint
+
+	# print(rospy.get_time() - aruco_detect_time)
 	if(rospy.get_time() - aruco_detect_time > 1.0/10.0 and autonomy_mode == False):
 		# print('entering autonomy_mode')
 		# X_d = X_t + X
@@ -232,14 +251,14 @@ def autonomy_control():
 		autonomy_mode = True
 
 	if (autonomy_mode):
-		xd  = Kp_x/Kd_x * (X_d - X)
-		yd  = Kp_y/Kd_y * (Y_d - Y)
-		zd  = Kp_z/Kd_z * (Z_d - Z)
+		xd = (Kp_x/Kd_x - 0.25) * (X_d - X)
+		yd = (Kp_y/Kd_y - 0.25) * (Y_d - Y)
+		zd = (Kp_z/Kd_z - 0.25) * (Z_d - Z)
 		r_d	= Kp_yaw * (yaw_d - yaw) + Ki_yaw * err_sum_yaw
 
-		xd = constrain(xd, -0.1, 0.1)
-		yd = constrain(yd, -0.1, 0.1)
-		zd = constrain(zd, -0.1, 0.1)
+		xd = constrain(xd, -0.5, 0.5)
+		yd = constrain(yd, -0.5, 0.5)
+		zd = constrain(zd, -0.5, 0.5)
 
 		xdd = Kd_x * (xd - VX) + Ki_x * err_sum_x
 		ydd = Kd_y * (yd - VY) + Ki_y * err_sum_y
@@ -250,27 +269,18 @@ def autonomy_control():
 		err_sum_z 	= constrain(err_sum_z + (zd - VZ), -10.0/Ki_z, 10.0/Ki_z)
 		err_sum_yaw = constrain(err_sum_yaw + (yaw_d - yaw), -10.0/Ki_yaw, 10.0/Ki_yaw)
 	else:
-		if(X_t**2.0 + Y_t**2.0 < r_t**2.0 and VX**2.0 + VY**2.0 + VZ**2.0 < V_t**2.0):
-			print('landing')
-			H_t = -0.1
-			# Z_d = -0.01
-			land_flag = True
-			# autonomy_mode = True
-		# else:
-			# print(sqrt(VX**2.0 + VY**2.0 + VZ**2.0))
-			# rospy.loginfo('%f, %f', sqrt(X_t**2.0 + Y_t**2.0),  sqrt(VX**2.0 + VY**2.0 + VZ**2.0))
-
-		xd = Kp_x_t/Kd_x_t * (X_t)
-		yd = Kp_y_t/Kd_y_t * (Y_t)
-		zd = Kp_z_t/Kd_z_t * (Z_t - H_t)
+		# print('not in autonomy_mode')
+		xd = (Kp_x_t/Kd_x_t - 0.0) * (X_t - dX_t)
+		yd = (Kp_y_t/Kd_y_t - 0.0) * (Y_t - dY_t)
+		zd = (Kp_z_t/Kd_z_t - 0.0) * (Z_t - dZ_t)
 		r_d	= Kp_yaw * (yaw_d - yaw) + Ki_yaw * err_sum_yaw
 
-		xd = constrain(xd, -0.1, 0.1)
-		yd = constrain(yd, -0.1, 0.1)
-		zd = constrain(zd, -0.1, 0.1)
+		xd = constrain(xd, -0.5, 0.5)
+		yd = constrain(yd, -0.5, 0.5)
+		zd = constrain(zd, -0.5, 0.5)
 
-		xdd = Kd_x_t * (xd - VX) + Ki_x_t * err_sum_x
-		ydd = Kd_y_t * (yd - VY) + Ki_y_t * err_sum_y
+		xdd = (Kd_x_t + 0.0) * (xd - VX) + Ki_x_t * err_sum_x
+		ydd = (Kd_y_t + 0.0)* (yd - VY) + Ki_y_t * err_sum_y
 		zdd = Kd_z_t * (zd - VZ) + Ki_z_t * err_sum_z
 
 		err_sum_x 	= constrain(err_sum_x + (xd - VX), -1.0/Ki_x_t, 1.0/Ki_x_t)
@@ -278,13 +288,15 @@ def autonomy_control():
 		err_sum_z 	= constrain(err_sum_z + (zd - VZ), -10.0/Ki_z_t, 10.0/Ki_z_t)	
 		err_sum_yaw = constrain(err_sum_yaw + (yaw_d - yaw), -10.0/Ki_yaw, 10.0/Ki_yaw)
 		
+		err_sum_xint 	= constrain(err_sum_xint + (X_t - dX_t), -2.0/Ki_xint, 2.0/Ki_xint)
+		err_sum_yint 	= constrain(err_sum_yint + (Y_t - dY_t), -2.0/Ki_yint, 2.0/Ki_yint)
 		# if(X_t**2.0 + Y_t **2.0 < 0.03**2.0):
 			# print('Should Land')
 
-	return xdd, ydd, zdd, r_d, land_flag
+	return xdd, ydd, zdd, r_d
 
 def main():
-	global Hz, filename, mass, g, radio_on
+	global Hz, filename, mass, g, radio_on, pose_received_time
 
 	global x_k_x, x_k_y, x_k_z
 
@@ -307,6 +319,7 @@ def main():
 	pub1 = rospy.Publisher('/neo/states',  Twist, queue_size=1)
 	pub2 = rospy.Publisher('/neo/out',     Twist, queue_size=1)
 
+	print('starting control')
 	rate = rospy.Rate(Hz)#100 Hz
 	# fo = open(filename, "a")
 	# print("writing to %s"%(filename))
@@ -314,7 +327,7 @@ def main():
 	while not rospy.is_shutdown():
 		try:
 		
-			xdd, ydd, zdd, r_d, land_flag = autonomy_control()
+			xdd, ydd, zdd, r_d = autonomy_control()
 
 
 			T_d 	= mass * (g - zdd)
@@ -323,7 +336,7 @@ def main():
 
 
 			# no integral without takeoff
-			if(Z > -0.005):	
+			if(Z > -0.005):
 				err_sum_z = 0.0
 				err_sum_y = 0.0
 				err_sum_x = 0.0
@@ -331,14 +344,18 @@ def main():
 				phi_d	  = 0.0*np.pi/180.0
 				theta_d	  = 0.0*np.pi/180.0
 
-			if(land_flag and Z >= -0.):
-				print('land complete')
-				T_d = 0.0
+			
+			# # publish to a topic
+			# if(rospy.get_time() - pose_received_time < 1.0/30.0):
+			# 	ctrl.linear.x 	= radio_on
+			# else:
+			# 	ctrl.linear.x 	= 0
+			# 	print('odom data received at less than 30Hz, giving control back to pilot')
+			# 	print(1.0/(rospy.get_time() - pose_received_time ))
 
-			# publish to a topic
-			ctrl.linear.x 	= radio_on
+			ctrl.linear.x    = radio_on
 			ctrl.linear.y 	= 0.0
-			ctrl.linear.z 	= constrain(T_d * Thrust_sf, 0.0, 3.0)
+			ctrl.linear.z 	= constrain(T_d * Thrust_sf, 0.0, 2.75)
 			ctrl.angular.x 	= constrain(phi_d * 180.0/np.pi, -25.0, 25.0) 
 			ctrl.angular.y 	= constrain(theta_d * 180.0/np.pi, -25.0, 25.0)
 			ctrl.angular.z 	= constrain(r_d * 180.0/np.pi, -30, 30)
