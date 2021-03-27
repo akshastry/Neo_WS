@@ -2,7 +2,7 @@
 
 #python imports
 import time
-import math
+# from math import abs
 import traceback
 import numpy as np
 from scipy.spatial.transform import Rotation as R
@@ -112,7 +112,7 @@ Y_t = 0.0;
 Z_t = 0.0;
 dX_t = 0.1;
 dY_t = 0.0;
-dZ_t = 0.9; # hieght above the marker to park the vehicle
+dZ_t = 0.7; # hieght above the marker to park the vehicle
 phi_t 	= 0.0;
 theta_t = 0.0;
 psi_t 	= 0.0;
@@ -127,6 +127,12 @@ aruco_detect_time = 0.0
 
 # T265_detect time
 pose_received_time = 0.0
+
+#landing
+r_t = 0.04
+V_t = 0.04
+land_flag = False
+complete_land = False
 
 def pos_vel_callback(data):
 	global X, Y, Z, VX, VY, VZ, yaw, pitch
@@ -154,8 +160,10 @@ def aruco_callback(data):
 	global dX_t, dY_t, dZ_t
 	global autonomy_mode, aruco_detect_time
 	global X_d, Y_d, Z_d, yaw_d
-	global X, Y, Z, yaw
+	global X, Y, Z, yaw, VX, VY, VZ
 	global LP_aruco
+
+	global land_flag, r_t, V_t
 
 	dt1 = rospy.get_time() - aruco_detect_time
 	aruco_detect_time = rospy.get_time()
@@ -175,14 +183,20 @@ def aruco_callback(data):
 	# Z_d = (Z_t - dZ_t) + Z
 	# print(Z_d)
 
-	dX_d = 0.1 * X_t + 0.05 * (0.0 - VX)
-	dY_d = 0.1 * Y_t + 0.05 * (0.0 - VY)
-	dZ_d = 0.1 * (Z_t - dZ_t) + 0.05 * (0.0 - VZ)  
+	dX_d = 0.12 * X_t + 0.06 * (0.0 - VX)
+	dY_d = 0.12 * Y_t + 0.06 * (0.0 - VY)
+	dZ_d = 0.12 * (Z_t - dZ_t) + 0.06 * (0.0 - VZ)  
 
+	if(land_flag == False):
+		X_d = X_d + dX_d
+		Y_d = Y_d + dY_d
+		Z_d = Z_d + dZ_d
 
-	X_d = X_d + dX_d
-	Y_d = Y_d + dY_d
-	Z_d = Z_d + dZ_d
+	if(X_t**2.0 + Y_t**2.0 < r_t**2.0 and VX**2.0 + VY**2.0 + VZ**2.0 < V_t**2.0):
+		# print('landing')
+		Z_d = Z_d + Z_t - 0.0
+		# Z_d = -0.01
+		land_flag = True
 
 	#get orientation
 	q0 = data.pose.orientation.w
@@ -199,6 +213,8 @@ def aruco_callback(data):
 
 	dyaw_d = 0.01 * psi_t
 	yaw_d = yaw_d + dyaw_d
+
+	# yaw_d = (1 - 0.5) * yaw_d + 0.5 * (yaw + psi_t)
 	# print(yaw_d*180.0/np.pi)
 
 	# autonomy_mode = False
@@ -270,7 +286,7 @@ def autonomy_control():
 
 	xd = constrain(xd, -0.5, 0.5)
 	yd = constrain(yd, -0.5, 0.5)
-	zd = constrain(zd, -0.5, 0.5)
+	zd = constrain(zd, -1.0, 1.0)
 
 	xdd = Kd_x * (xd - VX) + Ki_x * err_sum_x
 	ydd = Kd_y * (yd - VY) + Ki_y * err_sum_y
@@ -314,6 +330,8 @@ def main():
 
 	global meas, v2p, yaw_d, psi_t, X_t_F, Y_t_F, Z_t_F, X, VX_t, VY_t, VZ_t
 
+	global land_flag, complete_land, Z_d, Z
+
 	ctrl 	= Twist();
 	states 	= Twist();
 	out		= Twist();
@@ -356,7 +374,12 @@ def main():
 				phi_d	  = 0.0*np.pi/180.0
 				theta_d	  = 0.0*np.pi/180.0
 
-			
+			if(land_flag == True and np.abs(Z_d - Z) < 0.05):
+				complete_land = True
+
+			if(complete_land == True):
+				T_d = 0.0
+
 			# # publish to a topic
 			# if(rospy.get_time() - pose_received_time < 1.0/30.0):
 			# 	ctrl.linear.x 	= radio_on
