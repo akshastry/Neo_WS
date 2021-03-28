@@ -112,7 +112,7 @@ Y_t = 0.0;
 Z_t = 0.0;
 dX_t = 0.1;
 dY_t = 0.0;
-dZ_t = 0.7; # hieght above the marker to park the vehicle
+dZ_t = 0.5; # hieght above the marker to park the vehicle
 phi_t 	= 0.0;
 theta_t = 0.0;
 psi_t 	= 0.0;
@@ -183,9 +183,9 @@ def aruco_callback(data):
 	# Z_d = (Z_t - dZ_t) + Z
 	# print(Z_d)
 
-	dX_d = 0.12 * X_t + 0.06 * (0.0 - VX)
-	dY_d = 0.12 * Y_t + 0.06 * (0.0 - VY)
-	dZ_d = 0.12 * (Z_t - dZ_t) + 0.06 * (0.0 - VZ)  
+	dX_d = 0.10 * X_t + 0.05 * (0.0 - VX)
+	dY_d = 0.10 * Y_t + 0.05 * (0.0 - VY)
+	dZ_d = 0.10 * (Z_t - dZ_t) + 0.05 * (0.0 - VZ)  
 
 	if(land_flag == False):
 		X_d = X_d + dX_d
@@ -286,7 +286,7 @@ def autonomy_control():
 
 	xd = constrain(xd, -0.5, 0.5)
 	yd = constrain(yd, -0.5, 0.5)
-	zd = constrain(zd, -1.0, 1.0)
+	zd = constrain(zd, -0.75, 0.75)
 
 	xdd = Kd_x * (xd - VX) + Ki_x * err_sum_x
 	ydd = Kd_y * (yd - VY) + Ki_y * err_sum_y

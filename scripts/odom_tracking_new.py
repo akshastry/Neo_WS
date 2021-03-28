@@ -70,7 +70,7 @@ Ki_z_t = 0.01
 # desired
 X_d = 0.8;
 Y_d = 0.8;
-Z_d = -1.4;
+Z_d = -1.0;
 yaw_d 	= 0.0;
 
 
@@ -112,7 +112,7 @@ Y_t = 0.0;
 Z_t = 0.0;
 dX_t = 0.1;
 dY_t = 0.0;
-dZ_t = 0.9; # hieght above the marker to park the vehicle
+dZ_t = 0.3; # hieght above the marker to park the vehicle
 phi_t 	= 0.0;
 theta_t = 0.0;
 psi_t 	= 0.0;
