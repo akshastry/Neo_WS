@@ -21,7 +21,7 @@ filename += ".csv"
 
 mass = 1.46; # mass of quad
 g = 9.81;# acceleration due to gravity
-Thrust_sf = 2.1/(mass*g);
+Thrust_sf = 2.3/(mass*g);
 
 radio_on = 0
 
@@ -374,7 +374,7 @@ def main():
 				phi_d	  = 0.0*np.pi/180.0
 				theta_d	  = 0.0*np.pi/180.0
 
-			if(land_flag == True and np.abs(Z_d - Z) < 0.05):
+			if(land_flag == True and Z_d - Z < 0.05):
 				complete_land = True
 
 			if(complete_land == True):

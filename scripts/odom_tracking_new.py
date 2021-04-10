@@ -16,12 +16,12 @@ from datetime import datetime
 now = datetime.now() # current date and time
 filename = "/home/su/Dropbox/Quadrotor_flight_control/Arduino_playground/LOGS/odom_logs/"
 filename += now.strftime("%Y_%m_%d_%H_%M_%S")
-filename += ".csv"
+filename += "speed=1.csv"
 
 
 mass = 1.46; # mass of quad
 g = 9.81;# acceleration due to gravity
-Thrust_sf = 2.1/(mass*g);
+Thrust_sf = 2.3/(mass*g);
 
 radio_on = 0
 
@@ -68,8 +68,8 @@ Ki_z_t = 0.01
 
 
 # desired
-X_d = 0.8;
-Y_d = 0.8;
+X_d = 0.1;
+Y_d = 0.6;
 Z_d = -1.0;
 yaw_d 	= 0.0;
 
@@ -112,13 +112,14 @@ Y_t = 0.0;
 Z_t = 0.0;
 dX_t = 0.1;
 dY_t = 0.0;
-dZ_t = 0.3; # hieght above the marker to park the vehicle
+dZ_t = 0.7; # hieght above the marker to park the vehicle
 phi_t 	= 0.0;
 theta_t = 0.0;
 psi_t 	= 0.0;
 
-LP_aruco = 1.0
+LP_aruco = 0.7
 
+LP_aruco1 = 0.5
 # autonomy mode or aruco mode
 autonomy_mode = True
 
@@ -127,6 +128,11 @@ aruco_detect_time = 0.0
 
 # T265_detect time
 pose_received_time = 0.0
+
+#file io
+fo = open(filename, "a")
+print("writing to %s"%(filename))
+file_write_ctr = 1
 
 def pos_vel_callback(data):
 	global X, Y, Z, VX, VY, VZ, yaw, pitch
@@ -150,12 +156,14 @@ def att_callback(data):
 	roll 	= (1 - LP_roll)  * roll  + LP_roll 	* data.x
 
 def aruco_callback(data):
-	global X_t, Y_t, Z_t, phi_t, theta_t, psi_t
+	global X_t, Y_t, Z_t, phi_t, theta_t, psi_t, yaw
 	global dX_t, dY_t, dZ_t
 	global autonomy_mode, aruco_detect_time
 	global X_d, Y_d, Z_d, yaw_d
 	global X, Y, Z, yaw
-	global LP_aruco
+	global LP_aruco, LP_aruco1
+
+	global fo, filename, file_write_ctr
 
 	dt1 = rospy.get_time() - aruco_detect_time
 	aruco_detect_time = rospy.get_time()
@@ -175,12 +183,15 @@ def aruco_callback(data):
 	# Z_d = (Z_t - dZ_t) + Z
 	# print(Z_d)
 
-	dX_d = 0.1 * X_t + 0.05 * (0.0 - VX)
-	dY_d = 0.1 * Y_t + 0.05 * (0.0 - VY)
+	X_t1 =  X_t * np.cos(yaw) + Y_t * np.sin(yaw)
+	Y_t1 = -X_t * np.sin(yaw) + Y_t * np.cos(yaw)
+
+	dX_d = 0.1 * X_t1 + 0.05 * (0.0 - VX)
+	dY_d = 0.1 * Y_t1 + 0.05 * (0.0 - VY)
 	dZ_d = 0.1 * (Z_t - dZ_t) + 0.05 * (0.0 - VZ)  
 
 
-	X_d = X_d + dX_d
+	X_d = X_d + dX_d 
 	Y_d = Y_d + dY_d
 	Z_d = Z_d + dZ_d
 
@@ -195,10 +206,29 @@ def aruco_callback(data):
 	mrkr2trgt = R.from_euler('ZYX', [np.pi/2.0, 0.0, np.pi]) # mrkr is aruco marker frame, trgt is same frame but with axes parallel to body axes
 
 	bdy2trgt = bdy2cmra * cmra2mrkr * mrkr2trgt
-	psi_t, theta_t, phi_t = bdy2trgt.as_euler('ZYX')
+	psi, theta, phi = bdy2trgt.as_euler('ZYX')
+
+	psi_t 	= (1 - LP_aruco1) * psi_t 	+ LP_aruco1 * psi
+	theta_t = (1 - LP_aruco1) * theta_t + LP_aruco1 * theta
+	phi_t 	= (1 - LP_aruco1) * phi_t 	+ LP_aruco1 * phi
+
+
 
 	dyaw_d = 0.01 * psi_t
 	yaw_d = yaw_d + dyaw_d
+
+
+	data = "%f,%f,%f,%f,%f,%f,%f\n"%(rospy.get_time(), X_t, Y_t, Z_t, phi_t, theta_t, psi_t)
+
+	fo.write(data)
+	file_write_ctr = file_write_ctr  + 1
+	
+	if(file_write_ctr >=500):
+		fo.close()
+		fo = open(filename, "a")
+		file_write_ctr = 1
+
+		
 	# print(yaw_d*180.0/np.pi)
 
 	# autonomy_mode = False
@@ -254,7 +284,7 @@ def autonomy_control():
 	global dX_t, dY_t, dZ_t
 
 	global err_sum_xint, err_sum_yint, Ki_xint, Ki_yint
-
+	# print(Z)
 	# print(rospy.get_time() - aruco_detect_time)
 	# if(rospy.get_time() - aruco_detect_time > 1.0/10.0 and autonomy_mode == False):
 	# 	# print('entering autonomy_mode')
@@ -331,14 +361,16 @@ def main():
 	pub1 = rospy.Publisher('/neo/states',  Twist, queue_size=1)
 	pub2 = rospy.Publisher('/neo/out',     Twist, queue_size=1)
 
+	
+	
+	
+
 	print('starting control')
 	rate = rospy.Rate(Hz)#100 Hz
-	# fo = open(filename, "a")
-	# print("writing to %s"%(filename))
-	# file_write_ctr = 1
 	while not rospy.is_shutdown():
 		try:
 		
+			# print(rospy.get_time())
 			xdd, ydd, zdd, r_d = autonomy_control()
 
 
@@ -393,17 +425,7 @@ def main():
 
 
 
-			# data = "%f, ,%f,%f,%f,%f,%f, ,%f,%f,%f,%f,%f, ,%f,%f,%f,%f,%f\n"%(rospy.get_time(), X_d, X, VX, \
-			#  		Ki_x * err_sum_x, ctrl.angular.y, Y_d, Y, VY, Ki_y * err_sum_y, ctrl.angular.x, Z_d,\
-			#   		Z, VZ, Ki_z * err_sum_z, ctrl.linear.z)
-
-			# fo.write(data)
-			# file_write_ctr = file_write_ctr  + 1
 			
-			# if(file_write_ctr >=500):
-			# 	fo.close()
-			# 	fo = open(filename, "a")
-			# 	file_write_ctr = 1
 
 		except Exception:
 			traceback.print_exc()
