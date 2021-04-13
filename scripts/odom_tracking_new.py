@@ -16,7 +16,7 @@ from datetime import datetime
 now = datetime.now() # current date and time
 filename = "/home/su/Dropbox/Quadrotor_flight_control/Arduino_playground/LOGS/odom_logs/"
 filename += now.strftime("%Y_%m_%d_%H_%M_%S")
-filename += "speed=1.csv"
+filename += "speed=3.csv"
 
 
 mass = 1.46; # mass of quad
@@ -111,7 +111,7 @@ X_t = 0.0;
 Y_t = 0.0; 
 Z_t = 0.0;
 dX_t = 0.1;
-dY_t = 0.0;
+dY_t = 0.02;
 dZ_t = 0.7; # hieght above the marker to park the vehicle
 phi_t 	= 0.0;
 theta_t = 0.0;
@@ -156,11 +156,11 @@ def att_callback(data):
 	roll 	= (1 - LP_roll)  * roll  + LP_roll 	* data.x
 
 def aruco_callback(data):
-	global X_t, Y_t, Z_t, phi_t, theta_t, psi_t, yaw
+	global X_t, Y_t, Z_t, phi_t, theta_t, psi_t
 	global dX_t, dY_t, dZ_t
 	global autonomy_mode, aruco_detect_time
 	global X_d, Y_d, Z_d, yaw_d
-	global X, Y, Z, yaw
+	global X, Y, Z, yaw, VX, VY, VZ
 	global LP_aruco, LP_aruco1
 
 	global fo, filename, file_write_ctr
@@ -183,8 +183,8 @@ def aruco_callback(data):
 	# Z_d = (Z_t - dZ_t) + Z
 	# print(Z_d)
 
-	X_t1 =  X_t * np.cos(yaw) + Y_t * np.sin(yaw)
-	Y_t1 = -X_t * np.sin(yaw) + Y_t * np.cos(yaw)
+	X_t1 =  X_t * np.cos(yaw) + (Y_t - dY_t) * np.sin(yaw)
+	Y_t1 = -X_t * np.sin(yaw) + (Y_t - dY_t) * np.cos(yaw)
 
 	dX_d = 0.1 * X_t1 + 0.05 * (0.0 - VX)
 	dY_d = 0.1 * Y_t1 + 0.05 * (0.0 - VY)

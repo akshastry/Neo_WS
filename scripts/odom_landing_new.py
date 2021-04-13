@@ -68,9 +68,9 @@ Ki_z_t = 0.01
 
 
 # desired
-X_d = 0.8;
-Y_d = 0.8;
-Z_d = -1.4;
+X_d = 0.1;
+Y_d = 0.6;
+Z_d = -1.0;
 yaw_d 	= 0.0;
 
 
@@ -111,14 +111,15 @@ X_t = 0.0;
 Y_t = 0.0; 
 Z_t = 0.0;
 dX_t = 0.1;
-dY_t = 0.0;
-dZ_t = 0.5; # hieght above the marker to park the vehicle
+dY_t = 0.02;
+dZ_t = 0.7; # hieght above the marker to park the vehicle
 phi_t 	= 0.0;
 theta_t = 0.0;
 psi_t 	= 0.0;
 
-LP_aruco = 1.0
+LP_aruco = 0.7
 
+LP_aruco1 = 0.5
 # autonomy mode or aruco mode
 autonomy_mode = True
 
@@ -130,9 +131,18 @@ pose_received_time = 0.0
 
 #landing
 r_t = 0.04
-V_t = 0.04
+V_t = 0.05
 land_flag = False
 complete_land = False
+
+ang_vel_ctr = 0
+high_angle_ctr = 0
+
+
+#file io
+fo = open(filename, "a")
+print("writing to %s"%(filename))
+file_write_ctr = 1
 
 def pos_vel_callback(data):
 	global X, Y, Z, VX, VY, VZ, yaw, pitch
@@ -161,9 +171,13 @@ def aruco_callback(data):
 	global autonomy_mode, aruco_detect_time
 	global X_d, Y_d, Z_d, yaw_d
 	global X, Y, Z, yaw, VX, VY, VZ
-	global LP_aruco
+	global LP_aruco, LP_aruco1
 
-	global land_flag, r_t, V_t
+	global fo, filename, file_write_ctr
+
+	global land_flag, r_t, V_t, complete_land
+
+	global ang_vel_ctr, high_angle_ctr
 
 	dt1 = rospy.get_time() - aruco_detect_time
 	aruco_detect_time = rospy.get_time()
@@ -183,20 +197,8 @@ def aruco_callback(data):
 	# Z_d = (Z_t - dZ_t) + Z
 	# print(Z_d)
 
-	dX_d = 0.10 * X_t + 0.05 * (0.0 - VX)
-	dY_d = 0.10 * Y_t + 0.05 * (0.0 - VY)
-	dZ_d = 0.10 * (Z_t - dZ_t) + 0.05 * (0.0 - VZ)  
-
-	if(land_flag == False):
-		X_d = X_d + dX_d
-		Y_d = Y_d + dY_d
-		Z_d = Z_d + dZ_d
-
-	if(X_t**2.0 + Y_t**2.0 < r_t**2.0 and VX**2.0 + VY**2.0 + VZ**2.0 < V_t**2.0):
-		# print('landing')
-		Z_d = Z_d + Z_t - 0.0
-		# Z_d = -0.01
-		land_flag = True
+	X_t1 =  X_t * np.cos(yaw) + (Y_t - dY_t) * np.sin(yaw)
+	Y_t1 = -X_t * np.sin(yaw) + (Y_t - dY_t) * np.cos(yaw)
 
 	#get orientation
 	q0 = data.pose.orientation.w
@@ -211,8 +213,60 @@ def aruco_callback(data):
 	bdy2trgt = bdy2cmra * cmra2mrkr * mrkr2trgt
 	psi_t, theta_t, phi_t = bdy2trgt.as_euler('ZYX')
 
-	dyaw_d = 0.01 * psi_t
-	yaw_d = yaw_d + dyaw_d
+
+
+	## land if possible
+
+	# rospy.loginfo('%f, %f', phi_t*180.0/np.pi, theta_t*180.0/np.pi)
+	if(abs(phi_t*180.0/np.pi) < 4.0 and abs(theta_t*180.0/np.pi) < 3.0):
+		ang_vel_ctr = ang_vel_ctr + 1
+	else:
+		ang_vel_ctr = 0
+	if(X_t**2.0 + Y_t**2.0 < r_t**2.0 and VX**2.0 + VY**2.0 + VZ**2.0 < V_t**2.0 and ang_vel_ctr >= 3):
+		# print('landing')
+		Z_d = Z_d + Z_t - 0.0
+		dZ_t = 0.0
+		# Z_d = -0.01
+		land_flag = True
+		high_angle_ctr = 0
+		
+
+	if(land_flag == True):
+		if(X_t**2.0 + Y_t**2.0 > (2*r_t)**2.0 or VX**2.0 + VY**2.0 > (1.6*V_t)**2.0 or high_angle_ctr >= 4):
+			
+			if(complete_land == False and Z_t > 0.3):
+				land_flag = False
+				dZ_t = 0.7
+				rospy.loginfo('%f, %f, %f',X_t**2.0 + Y_t**2.0, VX**2.0 + VY**2.0, high_angle_ctr)
+
+		if(abs(phi_t*180.0/np.pi) > 4.0 or abs(theta_t*180.0/np.pi) > 3.0):
+			high_angle_ctr = high_angle_ctr + 1
+		else:
+			high_angle_ctr = 0
+
+
+ 	# track 
+
+	dX_d = 0.10 * X_t + 0.05 * (0.0 - VX)
+	dY_d = 0.10 * Y_t + 0.05 * (0.0 - VY)
+	dZ_d = 0.10 * (Z_t - dZ_t) + 0.05 * (0.0 - VZ)  
+
+	X_d = X_d + dX_d
+	Y_d = Y_d + dY_d
+	Z_d = Z_d + dZ_d
+	
+
+	# save
+
+	data = "%f,%f,%f,%f,%f,%f,%f\n"%(rospy.get_time(), X_t, Y_t, Z_t, phi_t, theta_t, psi_t)
+
+	fo.write(data)
+	file_write_ctr = file_write_ctr  + 1
+	
+	if(file_write_ctr >=500):
+		fo.close()
+		fo = open(filename, "a")
+		file_write_ctr = 1
 
 	# yaw_d = (1 - 0.5) * yaw_d + 0.5 * (yaw + psi_t)
 	# print(yaw_d*180.0/np.pi)
@@ -330,7 +384,7 @@ def main():
 
 	global meas, v2p, yaw_d, psi_t, X_t_F, Y_t_F, Z_t_F, X, VX_t, VY_t, VZ_t
 
-	global land_flag, complete_land, Z_d, Z
+	global land_flag, complete_land, Z_d, Z, Z_t
 
 	ctrl 	= Twist();
 	states 	= Twist();
@@ -351,9 +405,6 @@ def main():
 
 	print('starting control')
 	rate = rospy.Rate(Hz)#100 Hz
-	# fo = open(filename, "a")
-	# print("writing to %s"%(filename))
-	# file_write_ctr = 1
 	while not rospy.is_shutdown():
 		try:
 		
@@ -374,7 +425,7 @@ def main():
 				phi_d	  = 0.0*np.pi/180.0
 				theta_d	  = 0.0*np.pi/180.0
 
-			if(land_flag == True and Z_d - Z < 0.05):
+			if(land_flag == True and Z_t <= 0.1):
 				complete_land = True
 
 			if(complete_land == True):
