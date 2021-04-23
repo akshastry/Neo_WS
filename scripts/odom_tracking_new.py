@@ -183,8 +183,8 @@ def aruco_callback(data):
 	# Z_d = (Z_t - dZ_t) + Z
 	# print(Z_d)
 
-	X_t1 =  X_t * np.cos(yaw) + (Y_t - dY_t) * np.sin(yaw)
-	Y_t1 = -X_t * np.sin(yaw) + (Y_t - dY_t) * np.cos(yaw)
+	X_t1 =  X_t * np.cos(yaw) - (Y_t - dY_t) * np.sin(yaw)
+	Y_t1 =  X_t * np.sin(yaw) + (Y_t - dY_t) * np.cos(yaw)
 
 	dX_d = 0.1 * X_t1 + 0.05 * (0.0 - VX)
 	dY_d = 0.1 * Y_t1 + 0.05 * (0.0 - VY)
@@ -214,7 +214,7 @@ def aruco_callback(data):
 
 
 
-	dyaw_d = 0.01 * psi_t
+	dyaw_d = 0.01 * (psi_t - np.pi/2.0)
 	yaw_d = yaw_d + dyaw_d
 
 

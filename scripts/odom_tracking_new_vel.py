@@ -110,6 +110,10 @@ dt 		= 1.0/(1.0*Hz)
 X_t = 0.0; 
 Y_t = 0.0; 
 Z_t = 0.0;
+X_t1 = 0.0; 
+Y_t1 = 0.0; 
+Z_t1 = 0.0;
+
 dX_t = 0.1;
 dY_t = 0.02;
 dZ_t = 0.7; # hieght above the marker to park the vehicle
@@ -157,6 +161,7 @@ def att_callback(data):
 
 def aruco_callback(data):
 	global X_t, Y_t, Z_t, phi_t, theta_t, psi_t
+	global X_t1, Y_t1, Z_t1
 	global dX_t, dY_t, dZ_t
 	global autonomy_mode, aruco_detect_time
 	global X_d, Y_d, Z_d, yaw_d
@@ -183,12 +188,15 @@ def aruco_callback(data):
 	# Z_d = (Z_t - dZ_t) + Z
 	# print(Z_d)
 
-	X_t1 =  X_t * np.cos(yaw) + (Y_t - dY_t) * np.sin(yaw)
-	Y_t1 = -X_t * np.sin(yaw) + (Y_t - dY_t) * np.cos(yaw)
+	X_t1 =  X_t * np.cos(yaw) - (Y_t - dY_t) * np.sin(yaw)
+	Y_t1 =  X_t * np.sin(yaw) + (Y_t - dY_t) * np.cos(yaw)
+	Z_t1 = 	Z_t - dZ_t
+
+	# rospy.loginfo("%f, %f", X_t1, Y_t1)
 
 	dX_d = 0.1 * X_t1 + 0.05 * (0.0 - VX)
 	dY_d = 0.1 * Y_t1 + 0.05 * (0.0 - VY)
-	dZ_d = 0.1 * (Z_t - dZ_t) + 0.05 * (0.0 - VZ)  
+	dZ_d = 0.1 * Z_t1 + 0.05 * (0.0 - VZ)  
 
 
 	X_d = X_d + dX_d 
@@ -214,8 +222,8 @@ def aruco_callback(data):
 
 
 
-	# dyaw_d = 0.01 * (psi_t - np.pi/4.0)
-	# yaw_d = yaw_d + dyaw_d
+	dyaw_d = 0.01 * (psi_t - np.pi/2.0)
+	yaw_d = yaw_d + dyaw_d
 
 
 	data = "%f,%f,%f,%f,%f,%f,%f\n"%(rospy.get_time(), X_t, Y_t, Z_t, phi_t, theta_t, psi_t)
@@ -281,6 +289,7 @@ def autonomy_control():
 	global yaw
 	global aruco_detect_time, autonomy_mode
 	global X_t, Y_t, Z_t, psi_t
+	global X_t1, Y_t1, Z_t1
 	global dX_t, dY_t, dZ_t
 
 	global err_sum_xint, err_sum_yint, Ki_xint, Ki_yint
@@ -296,8 +305,8 @@ def autonomy_control():
 		xd = (Kp_x/Kd_x - 0.0) * (X_d - X)
 		yd = (Kp_y/Kd_y - 0.0) * (Y_d - Y)
 	else:
-		xd = (Kp_x/Kd_x - 0.0) * (X_t)
-		yd = (Kp_y/Kd_y - 0.0) * (Y_t)
+		xd = (Kp_x/Kd_x - 0.0) * (X_t1)
+		yd = (Kp_y/Kd_y - 0.0) * (Y_t1)
 	
 
 	zd = (Kp_z/Kd_z - 0.0) * (Z_d - Z)
