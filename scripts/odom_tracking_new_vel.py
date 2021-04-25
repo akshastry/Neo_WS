@@ -36,7 +36,7 @@ Ki_y = 0.001
 
 Kp_z = 7.0#2.0
 Kd_z = 5.0#0.9
-Ki_z = 0.05
+Ki_z = 0.01#0.01
 
 Kp_yaw = 5.0
 Ki_yaw = 0.01
@@ -91,9 +91,9 @@ roll 	= 0.0
 #Low Pass
 LP_X = 1.0
 LP_Y = 1.0
-LP_Z = 0.55#0.55
+LP_Z = 0.8#0.55
 
-LP_VX = 0.9
+LP_VX = 0.7
 LP_VY = 0.9
 LP_VZ = 0.9
 
@@ -222,7 +222,7 @@ def aruco_callback(data):
 
 
 
-	dyaw_d = 0.01 * (psi_t - np.pi/2.0)
+	dyaw_d = 0.01 * (psi_t)# - np.pi/2.0)
 	yaw_d = yaw_d + dyaw_d
 
 
