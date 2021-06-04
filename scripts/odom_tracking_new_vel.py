@@ -115,7 +115,7 @@ Y_t1 = 0.0;
 Z_t1 = 0.0;
 
 dX_t = 0.1;
-dY_t = 0.02;
+dY_t = 0.03;
 dZ_t = 0.7; # hieght above the marker to park the vehicle
 phi_t 	= 0.0;
 theta_t = 0.0;

@@ -111,7 +111,7 @@ X_t = 0.0;
 Y_t = 0.0; 
 Z_t = 0.0;
 dX_t = 0.1;
-dY_t = 0.02;
+dY_t = 0.03;
 dZ_t = 0.7; # hieght above the marker to park the vehicle
 phi_t 	= 0.0;
 theta_t = 0.0;
@@ -130,8 +130,8 @@ aruco_detect_time = 0.0
 pose_received_time = 0.0
 
 #landing
-r_t = 0.04
-V_t = 0.05
+r_t = 0.025
+V_t = 0.04
 land_flag = False
 complete_land = False
 
@@ -217,8 +217,8 @@ def aruco_callback(data):
 
 	## land if possible
 
-	# rospy.loginfo('%f, %f', phi_t*180.0/np.pi, theta_t*180.0/np.pi)
-	if(abs(phi_t*180.0/np.pi) < 4.0 and abs(theta_t*180.0/np.pi) < 3.0):
+	# rospy.loginfo('%f, %f, %f, %f', phi_t*180.0/np.pi, theta_t*180.0/np.pi,X_t**2.0 + Y_t**2.0,VX**2.0 + VY**2.0 + VZ**2.0)
+	if(abs(phi_t*180.0/np.pi) < 3.0):# and abs(theta_t*180.0/np.pi) < 4.0):
 		ang_vel_ctr = ang_vel_ctr + 1
 	else:
 		ang_vel_ctr = 0
@@ -232,14 +232,14 @@ def aruco_callback(data):
 		
 
 	if(land_flag == True):
-		if(X_t**2.0 + Y_t**2.0 > (2*r_t)**2.0 or VX**2.0 + VY**2.0 > (1.6*V_t)**2.0 or high_angle_ctr >= 4):
+		if(X_t**2.0 + Y_t**2.0 > (1.3*r_t)**2.0 or VX**2.0 + VY**2.0 > (1.2*V_t)**2.0 or high_angle_ctr >= 4):
 			
 			if(complete_land == False and Z_t > 0.3):
 				land_flag = False
 				dZ_t = 0.7
 				rospy.loginfo('%f, %f, %f',X_t**2.0 + Y_t**2.0, VX**2.0 + VY**2.0, high_angle_ctr)
 
-		if(abs(phi_t*180.0/np.pi) > 4.0 or abs(theta_t*180.0/np.pi) > 3.0):
+		if(abs(phi_t*180.0/np.pi) > 4.0):# or abs(theta_t*180.0/np.pi) > 3.0):
 			high_angle_ctr = high_angle_ctr + 1
 		else:
 			high_angle_ctr = 0
@@ -247,8 +247,8 @@ def aruco_callback(data):
 
  	# track 
 
-	dX_d = 0.10 * X_t + 0.05 * (0.0 - VX)
-	dY_d = 0.10 * Y_t + 0.05 * (0.0 - VY)
+	dX_d = 0.10 * X_t + 0.07 * (0.0 - VX)
+	dY_d = 0.10 * Y_t + 0.07 * (0.0 - VY)
 	dZ_d = 0.10 * (Z_t - dZ_t) + 0.05 * (0.0 - VZ)  
 
 	X_d = X_d + dX_d
@@ -340,7 +340,7 @@ def autonomy_control():
 
 	xd = constrain(xd, -0.5, 0.5)
 	yd = constrain(yd, -0.5, 0.5)
-	zd = constrain(zd, -0.75, 0.75)
+	zd = constrain(zd, -0.4, 0.4)
 
 	xdd = Kd_x * (xd - VX) + Ki_x * err_sum_x
 	ydd = Kd_y * (yd - VY) + Ki_y * err_sum_y
