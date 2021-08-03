@@ -13,6 +13,7 @@
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/Vector3.h"
+#include "std_msgs/UInt8.h"
 #include "tf/tf.h"
 // #include "std_msgs/Float64.h"
 
@@ -53,13 +54,21 @@ try
 
     ros::NodeHandle n;
 
-    ros::Publisher odom_pub = n.advertise<geometry_msgs::Twist>("/rs_t265/position_and_velocity", 1);
-    ros::Publisher att_pub = n.advertise<geometry_msgs::Vector3>("/rs_t265/attitude", 1);
+    ros::Publisher odom_pub  = n.advertise<geometry_msgs::Twist>("/rs_t265/position_and_velocity", 1);
+    ros::Publisher accel_pub = n.advertise<geometry_msgs::Vector3>("/rs_t265/acceleration", 1);
+    ros::Publisher att_pub   = n.advertise<geometry_msgs::Vector3>("/rs_t265/attitude", 1);
+    ros::Publisher dev_pub   = n.advertise<std_msgs::UInt8>("/rs_t265/connected_or_not", 1);
 
     ros::Rate loop_rate(200);
 
     geometry_msgs::Twist odom_msg;
+    geometry_msgs::Vector3 accel_msg;
     geometry_msgs::Vector3 attitude_msg;
+
+    std_msgs::UInt8 connected_msg;
+    connected_msg.data = 1.0;
+    dev_pub.publish(connected_msg);
+
     double pitch, roll, yaw;
 
     double t0, t1, t2, t3, t4, psi, theta, phi;
@@ -70,8 +79,12 @@ try
     // // Main loop
     while (ros::ok())
     {
+        connected_msg.data = 1.0;
+        dev_pub.publish(connected_msg);
+
         // Wait for the next set of frames from the camera
         auto frames = pipe.wait_for_frames();
+
         // Get a frame from the pose stream
         auto f = frames.first_or_default(RS2_STREAM_POSE);
         // Cast the frame to pose_frame and get its data
@@ -82,6 +95,7 @@ try
 
         if(pose_data.tracker_confidence >= 1)
         {
+            // publish position and velocity
             odom_msg.linear.x  = -pose_data.translation.z    ;
             odom_msg.linear.y  = pose_data.translation.x  ;
             odom_msg.linear.z  = -pose_data.translation.y    ;
@@ -90,6 +104,13 @@ try
             odom_msg.angular.z = -pose_data.velocity.y      ;
             odom_pub.publish(odom_msg);
 
+            // publish acceleration
+            accel_msg.x = -pose_data.acceleration.z;
+            accel_msg.y =  pose_data.acceleration.x;
+            accel_msg.z = -pose_data.acceleration.y;
+            accel_pub.publish(accel_msg);
+
+            // publish attitude
             q.setW(pose_data.rotation.w);
             q.setX(pose_data.rotation.x);
             q.setY(pose_data.rotation.y);

@@ -121,7 +121,7 @@ phi_t 	= 0.0;
 theta_t = 0.0;
 psi_t 	= 0.0;
 
-LP_aruco = 0.7
+LP_aruco = 0.9
 
 LP_aruco1 = 0.5
 # autonomy mode or aruco mode
@@ -142,9 +142,9 @@ file_write_ctr = 1
 # Kalman
 aruco_ctr = 0
 
-x_k_x = np.zeros(2); P_k_x = (10.0**0.0)*np.ones((2,2)); sigma_M2_x = 4.0*10**(-4.0); sigma_P2_x = 4.0*10**(-4.0);
-x_k_y = np.zeros(2); P_k_y = (10.0**0.0)*np.ones((2,2)); sigma_M2_y = 4.0*10**(-4.0); sigma_P2_y = 4.0*10**(-4.0);
-x_k_z = np.zeros(2); P_k_z = (10.0**0.0)*np.ones((2,2)); sigma_M2_z = 4.0*10**(-4.0); sigma_P2_z = 4.0*10**(-4.0);
+x_k_x = np.zeros(2); P_k_x = (10.0**0.0)*np.ones((2,2)); sigma_M2_x = 4.0*10**(-4.0); sigma_P2_x = 4.0*10**(-2.0);
+x_k_y = np.zeros(2); P_k_y = (10.0**0.0)*np.ones((2,2)); sigma_M2_y = 4.0*10**(-4.0); sigma_P2_y = 4.0*10**(-2.0);
+x_k_z = np.zeros(2); P_k_z = (10.0**0.0)*np.ones((2,2)); sigma_M2_z = 4.0*10**(-4.0); sigma_P2_z = 4.0*10**(-2.0);
 x_k_z[0] = 1.5
 
 def Kalman_Filter1(x_k, P_k, u_k, z_k, sigma_P2, sigma_M2, dt1):
@@ -246,16 +246,20 @@ def aruco_callback(data):
 		x_k_y, P_k_y = Kalman_Filter1(x_k_y, P_k_y, 0.0, Y_t1, sigma_P2_y, sigma_M2_y, dt1)
 		x_k_z, P_k_z = Kalman_Filter1(x_k_z, P_k_z, 0.0, Z_t,  sigma_P2_z, sigma_M2_z, dt1)
 
-	rospy.loginfo("%f, %f, %f, %d", x_k_x[1], x_k_y[1], x_k_z[1], aruco_ctr)
+	# rospy.loginfo("%f, %f, %f, %d", x_k_x[1], x_k_y[1], x_k_z[1], aruco_ctr)
 	# rospy.loginfo("%f, %f", X_t1, Y_t1)
 
 	dX_d = 0.1 * X_t1 + 0.05 * (0.0 - VX)
 	dY_d = 0.1 * Y_t1 + 0.05 * (0.0 - VY)
 	dZ_d = 0.1 * Z_t1 + 0.05 * (0.0 - VZ)  
 
-	if(aruco_ctr >= 500):
-		dX_d = 0.1 * x_k_x[0] + 0.05 * (x_k_x[1])
-		dY_d = 0.1 * x_k_y[0] + 0.05 * (x_k_y[1])
+	if(aruco_ctr == 200):
+		print(200)
+
+	if(aruco_ctr >= 200):
+		dX_d = 0.08 * X_t1 + 0.0005 * (x_k_x[1])
+		# dY_d = 0.1 * x_k_y[0] + 0.05 * (0.0 - VY)
+		dY_d = 0.09 * Y_t1 + 0.0007 * (x_k_y[1])
 
 
 	X_d = X_d + dX_d 
@@ -491,13 +495,13 @@ def main():
 			pub1.publish(states);
 
 
-			# out.linear.x 	= X#roll*180.0/np.pi#meas
-			# out.linear.y 	= pitch*180.0/np.pi#x_k_z[0]
-			# out.linear.z 	= yaw*180.0/np.pi#v2p
-			# out.angular.x 	= 0.0#yaw_d * 180.0/np.pi
-			# out.angular.y 	= 0.0#psi_t * 180.0/np.pi
-			# out.angular.z 	= 0.0#0.0
-			# pub2.publish(out);
+			out.linear.x 	= x_k_y[0]
+			out.linear.y 	= Y_t1
+			out.linear.z 	= 0.0
+			out.angular.x 	= x_k_x[1]
+			out.angular.y 	= -VX
+			out.angular.z 	= 0.0#0.0
+			pub2.publish(out);
 
 
 
