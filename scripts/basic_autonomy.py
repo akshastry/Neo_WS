@@ -16,7 +16,7 @@ from datetime import datetime
 now = datetime.now() # current date and time
 filename = "/home/su/Dropbox/Quadrotor_flight_control/Arduino_playground/LOGS/odom_logs/"
 filename += now.strftime("%Y_%m_%d_%H_%M_%S")
-filename += "speed=3_0_old_cm.csv"
+filename += "_khushi.csv"
 
 
 mass = 1.46; # mass of quad
@@ -137,7 +137,7 @@ realsense_connected = False
 
 #file io
 fo = open(filename, "a")
-# print("writing to %s"%(filename))
+print("writing to %s"%(filename))
 file_write_ctr = 1
 
 def conn_callback(data):
@@ -148,6 +148,7 @@ def conn_callback(data):
 def pos_vel_callback(data):
 	global X, Y, Z, VX, VY, VZ, yaw, pitch
 	global pose_received_time
+	global filename, fo, file_write_ctr
 
 	# 0.155m is the distance of t265 from quad center of mass
 	X = (1.0 - LP_X) * X + LP_X * (data.linear.x + 0.155*(1-np.cos(yaw)) + 0.155*(1-np.cos(pitch)));
@@ -160,9 +161,20 @@ def pos_vel_callback(data):
 
 	pose_received_time = rospy.get_time()
 
+	data = "%f,%f,%f,%f,%f,%f,%f\n"%(rospy.get_time(), X, Y, Z, VX, VY, VZ)
+
+	fo.write(data)
+	file_write_ctr = file_write_ctr  + 1
+	
+	if(file_write_ctr >=500):
+		fo.close()
+		fo = open(filename, "a")
+		file_write_ctr = 1
+
 def accel_callback(data):
 	global hover_flag
 	if(np.sqrt(data.z**2.0+data.y**2.0+data.x**2.0) > 15.0):
+		print("large accelration, stopping")
 		hover_flag = False
 
 def att_callback(data):
@@ -240,12 +252,26 @@ def cmd_callback(data):
 		phi_d	  = 0.0*np.pi/180.0
 		theta_d	  = 0.0*np.pi/180.0
 		r_d 	  = 0.0
-		hover_flag = True
+		land_flag     = False
+		complete_land = False
+		hover_flag    = True
+		
 	elif(data.data == 2):
 		X_d = X_d + 1.0
 	elif(data.data == 3):
-		Z_d = 0.1
+		print("Land called")
+		Z_d = 0.2
 		land_flag = True
+
+	elif(data.data == 4):
+		X_d = X_d - 1.0
+	
+	elif(data.data == 5):
+		Y_d = Y_d - 1.0
+
+	elif(data.data == 6):
+		Y_d = Y_d + 1.0
+		
 	else:
 		print("command not recognized")
 
@@ -266,7 +292,7 @@ def main():
 
 	rospy.Subscriber('/rs_t265/connected_or_not', 	   UInt8,	 	conn_callback)
 	rospy.Subscriber('/rs_t265/position_and_velocity', Twist, 		pos_vel_callback)
-	rospy.Subscriber('/rs_t265/accelration', 		   Twist, 		accel_callback)
+	rospy.Subscriber('/rs_t265/acceleration', 		   Vector3, 	accel_callback)
 	rospy.Subscriber('/rs_t265/attitude', 			   Vector3, 	att_callback)
 	rospy.Subscriber('/serialcom/radio', 			   UInt8, 		Rdo_callback)
 	rospy.Subscriber('/gcs/cmd', 					   UInt8, 		cmd_callback)
@@ -295,6 +321,7 @@ def main():
 			theta_d = -xdd/g*np.cos(yaw) - ydd/g*np.sin(yaw)
 			phi_d 	= (ydd/g*np.cos(yaw) - xdd/g*np.sin(yaw))*np.cos(theta_d)
 
+
 			# no integral without takeoff
 			if(hover_flag == False or realsense_connected ==  False):
 				err_sum_z 	= 0.0
@@ -305,13 +332,20 @@ def main():
 				phi_d	  	= 0.0*np.pi/180.0
 				theta_d	  	= 0.0*np.pi/180.0
 				r_d 		= 0.0
+
+			# print(hover_flag, land_flag, complete_land)
 				
 
-			# if(land_flag == True and Z <= 0.1):
-			# 	complete_land = True
+			if(hover_flag == True and land_flag == True and Z >= -0.01):
+				complete_land = True
 
-			# if(complete_land == True):
-			# 	T_d = 0.0
+			if(complete_land == True):
+				complete_land 	= False
+				hover_flag 		= False
+				T_d 			= 0.0
+				phi_d	  		= 0.0*np.pi/180.0
+				theta_d	  		= 0.0*np.pi/180.0
+				r_d 			= 0.0
 
 			
 			# # publish to a topic

@@ -53,6 +53,21 @@ def handle_client(conn, addr):
                     print("Landing")
                     cmd.data = 3
                     pub.publish(cmd)
+
+                elif msg == "back":
+                    print("Back")
+                    cmd.data = 4
+                    pub.publish(cmd)
+
+                elif msg == "left":
+                    print("Left")
+                    cmd.data = 5
+                    pub.publish(cmd)
+
+                elif msg == "right":
+                    print("Right")
+                    cmd.data = 6
+                    pub.publish(cmd)
                         
                 else:
                     print("Command not recognized")

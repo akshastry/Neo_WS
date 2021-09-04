@@ -48,10 +48,6 @@ def main():
 			    cmd.data = 1
 			    time.sleep(3)
 			    pub.publish(cmd)
-			    # time.sleep(1)
-			    # pub.publish(cmd)
-			    # time.sleep(1)
-			    # pub.publish(cmd)
 
 			elif result != -1:
 			    print("Moving forward")
@@ -65,8 +61,6 @@ def main():
 			    cmd.data = 3
 			    time.sleep(3)
 			    pub.publish(cmd)
-			    # pub.publish(cmd)
-			    # pub.publish(cmd)
 
 			else:
 			    print("Command not recognized")						

@@ -26,8 +26,8 @@ Thrust_sf = 2.3/(mass*g);
 radio_on = 0
 
 
-Kp_x = 4.0#2.5
-Kd_x = 5.5#0.001
+Kp_x = 1.0#2.5
+Kd_x = 2.5#0.001
 Ki_x = 0.001
 
 Kp_y = 4.0#2.5
@@ -70,7 +70,7 @@ Ki_z_t = 0.01
 # desired
 X_d = 0.1;
 Y_d = 0.6;
-Z_d = -1.0;
+Z_d = -0.8;
 yaw_d 	= 0.0;
 
 
@@ -121,7 +121,7 @@ phi_t 	= 0.0;
 theta_t = 0.0;
 psi_t 	= 0.0;
 
-LP_aruco = 0.7
+LP_aruco = 1.0
 
 LP_aruco1 = 0.5
 # autonomy mode or aruco mode
@@ -137,6 +137,14 @@ pose_received_time = 0.0
 fo = open(filename, "a")
 print("writing to %s"%(filename))
 file_write_ctr = 1
+
+# realsense flag
+realsense_connected = False
+
+def conn_callback(data):
+	global realsense_connected
+	if (data.data == 1):
+		realsense_connected = True
 
 def pos_vel_callback(data):
 	global X, Y, Z, VX, VY, VZ, yaw, pitch
@@ -192,17 +200,6 @@ def aruco_callback(data):
 	Y_t1 =  X_t * np.sin(yaw) + (Y_t - dY_t) * np.cos(yaw)
 	Z_t1 = 	Z_t - dZ_t
 
-	# rospy.loginfo("%f, %f", X_t1, Y_t1)
-
-	dX_d = 0.1 * X_t1 + 0.05 * (0.0 - VX)
-	dY_d = 0.1 * Y_t1 + 0.05 * (0.0 - VY)
-	dZ_d = 0.1 * Z_t1 + 0.05 * (0.0 - VZ)  
-
-
-	X_d = X_d + dX_d 
-	Y_d = Y_d + dY_d
-	Z_d = Z_d + dZ_d
-
 	#get orientation
 	q0 = data.pose.orientation.w
 	q1 = data.pose.orientation.x
@@ -239,23 +236,9 @@ def aruco_callback(data):
 		
 	# print(yaw_d*180.0/np.pi)
 
+	if(autonomy_mode):
+		print('entering aruco_mode')
 	autonomy_mode = False
-	# print('entering aruco_mode')
-
-# def Alt_vel_callback(data):
-# 	global Z_d, X_d, Y_d
-	
-# 	Z_d 	= -data.z
-
-# 	if(autonomy_mode):
-# 		X_d 	= data.x
-# 		Y_d 	= data.y	
-
-# def yawd_callback(data):
-# 	global yaw_d, autonomy_mode
-
-# 	if(autonomy_mode):
-# 		yaw_d 	= data.data
 
 def Rdo_callback(data):
 	global err_sum_x, err_sum_y, err_sum_z, err_sum_yaw, radio_on,   X_d, Y_d, X, Y
@@ -279,6 +262,7 @@ def constrain(x, a, b):
 		x = b
 	return x
 
+err_X_prev = 0
 def autonomy_control():
 	global Kp_x, Kp_y, Kp_z, Kd_x, Kd_y, Kd_z, Ki_x, Ki_y, Ki_z
 	global Kp_x_t, Kp_y_t, Kp_z_t, Kd_x_t, Kd_y_t, Kd_z_t, Ki_x_t, Ki_y_t, Ki_z_t
@@ -293,61 +277,36 @@ def autonomy_control():
 	global dX_t, dY_t, dZ_t
 
 	global err_sum_xint, err_sum_yint, Ki_xint, Ki_yint
-	# print(Z)
-	# print(rospy.get_time() - aruco_detect_time)
-	# if(rospy.get_time() - aruco_detect_time > 1.0/10.0 and autonomy_mode == False):
-	# 	# print('entering autonomy_mode')
-	# 	# X_d = X_t + X
-	# 	# Y_d = Y_t + Y
-	# 	autonomy_mode = True
+
+	global err_X_prev
 
 	if (autonomy_mode):
-		xd = (Kp_x/Kd_x - 0.0) * (X_d - X)
-		yd = (Kp_y/Kd_y - 0.0) * (Y_d - Y)
+		err_X = X_d - X
+		err_Y = Y_d - Y
 	else:
-		xd = (Kp_x/Kd_x - 0.0) * (X_t1)
-		yd = (Kp_y/Kd_y - 0.0) * (Y_t1)
+		err_X = X_t1
+		err_Y = Y_t1
 	
 
-	zd = (Kp_z/Kd_z - 0.0) * (Z_d - Z)
-	r_d	= Kp_yaw * (yaw_d - yaw) + Ki_yaw * err_sum_yaw
+	err_Z = Z_d - Z
+	err_yaw = yaw_d - yaw
 
-	xd = constrain(xd, -0.5, 0.5)
-	yd = constrain(yd, -0.5, 0.5)
-	zd = constrain(zd, -0.5, 0.5)
+	err_sum_x 	= constrain(err_sum_x + err_X, -1.0/Ki_x, 1.0/Ki_x)
+	err_sum_y 	= constrain(err_sum_y + err_Y, -1.0/Ki_y, 1.0/Ki_y)
+	err_sum_z 	= constrain(err_sum_z + err_Z, -10.0/Ki_z, 10.0/Ki_z)
+	err_sum_yaw = constrain(err_sum_yaw + err_yaw, -10.0/Ki_yaw, 10.0/Ki_yaw)
 
-	xdd = Kd_x * (xd - VX) + Ki_x * err_sum_x
-	ydd = Kd_y * (yd - VY) + Ki_y * err_sum_y
-	zdd = Kd_z * (zd - VZ) + Ki_z * err_sum_z
 
-	err_sum_x 	= constrain(err_sum_x + (xd - VX), -1.0/Ki_x, 1.0/Ki_x)
-	err_sum_y 	= constrain(err_sum_y + (yd - VY), -1.0/Ki_y, 1.0/Ki_y)
-	err_sum_z 	= constrain(err_sum_z + (zd - VZ), -10.0/Ki_z, 10.0/Ki_z)
-	err_sum_yaw = constrain(err_sum_yaw + (yaw_d - yaw), -10.0/Ki_yaw, 10.0/Ki_yaw)
-	# else:
-	# 	print('not in autonomy_mode')
-		# xd = (Kp_x_t/Kd_x_t - 0.0) * (X_t - dX_t)
-		# yd = (Kp_y_t/Kd_y_t - 0.0) * (Y_t - dY_t)
-		# zd = (Kp_z_t/Kd_z_t - 0.0) * (Z_t - dZ_t)
-		# r_d	= Kp_yaw * (yaw_d - yaw) + Ki_yaw * err_sum_yaw
+	xdd = Kp_x * err_X + 120 * Kd_x * (err_X - err_X_prev) + Ki_x * err_sum_x
+	# xdd = Kp_x * err_X + Kd_x * (0.0 - VX) + Ki_x * err_sum_x
+	ydd = Kp_y * err_Y + Kd_y * (0.0 - VY) + Ki_y * err_sum_y
+	zdd = Kp_z * err_Z + Kd_z * (0.0 - VZ) + Ki_z * err_sum_z
 
-		# xd = constrain(xd, -0.5, 0.5)
-		# yd = constrain(yd, -0.5, 0.5)
-		# zd = constrain(zd, -0.5, 0.5)
+	r_d	= Kp_yaw * err_yaw + Ki_yaw * err_sum_yaw
 
-		# xdd = (Kd_x_t + 0.0) * (xd - VX) + Ki_x_t * err_sum_x
-		# ydd = (Kd_y_t + 0.0)* (yd - VY) + Ki_y_t * err_sum_y
-		# zdd = Kd_z_t * (zd - VZ) + Ki_z_t * err_sum_z
 
-		# err_sum_x 	= constrain(err_sum_x + (xd - VX), -1.0/Ki_x_t, 1.0/Ki_x_t)
-		# err_sum_y 	= constrain(err_sum_y + (yd - VY), -1.0/Ki_y_t, 1.0/Ki_y_t)
-		# err_sum_z 	= constrain(err_sum_z + (zd - VZ), -10.0/Ki_z_t, 10.0/Ki_z_t)	
-		# err_sum_yaw = constrain(err_sum_yaw + (yaw_d - yaw), -10.0/Ki_yaw, 10.0/Ki_yaw)
-		
-		# err_sum_xint 	= constrain(err_sum_xint + (X_t - dX_t), -2.0/Ki_xint, 2.0/Ki_xint)
-		# err_sum_yint 	= constrain(err_sum_yint + (Y_t - dY_t), -2.0/Ki_yint, 2.0/Ki_yint)
-		# if(X_t**2.0 + Y_t **2.0 < 0.03**2.0):
-			# print('Should Land')
+	err_X_prev = err_X
+	
 
 	return xdd, ydd, zdd, r_d
 
@@ -365,10 +324,9 @@ def main():
 	rospy.init_node('odom', anonymous=True)
 
 	rospy.Subscriber('/aruco_single/pose', 			   PoseStamped, aruco_callback)	
+	rospy.Subscriber('/rs_t265/connected_or_not', 	   UInt8,	 	conn_callback)
 	rospy.Subscriber('/rs_t265/position_and_velocity', Twist, 		pos_vel_callback)
 	rospy.Subscriber('/rs_t265/attitude', 			   Vector3, 	att_callback)
-	# rospy.Subscriber('/serialcom/alt_vel_des', 		   Vector3, 	Alt_vel_callback)
-	# rospy.Subscriber('/serialcom/yaw_des', 			   Float64, 	yawd_callback)
 	rospy.Subscriber('/serialcom/radio', 			   UInt8, 		Rdo_callback)
 
 	pub  = rospy.Publisher('/neo/control', Twist, queue_size=1)
@@ -397,13 +355,15 @@ def main():
 
 
 			# no integral without takeoff
-			if(Z > -0.005):
+			if(Z > -0.005 or realsense_connected == False):
 				err_sum_z = 0.0
 				err_sum_y = 0.0
 				err_sum_x = 0.0
 				err_sum_yaw = 0.0
-				phi_d	  = 0.0*np.pi/180.0
-				theta_d	  = 0.0*np.pi/180.0
+				T_d 		= 0.0
+				phi_d	  	= 0.0*np.pi/180.0
+				theta_d	  	= 0.0*np.pi/180.0
+				r_d 		= 0.0
 
 			
 			# # publish to a topic
