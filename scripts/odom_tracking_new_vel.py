@@ -27,16 +27,16 @@ radio_on = 0
 
 
 Kp_x = 1.0#2.5
-Kd_x = 2.5#0.001
-Ki_x = 0.001
+Kd_x = 1.5#0.001
+Ki_x = 0.003
 
-Kp_y = 4.0#2.5
-Kd_y = 5.5#0.001
-Ki_y = 0.001
+Kp_y = 1.0#2.5
+Kd_y = 1.5#0.001
+Ki_y = 0.003
 
 Kp_z = 7.0#2.0
 Kd_z = 5.0#0.9
-Ki_z = 0.01#0.01
+Ki_z = 0.03#0.01
 
 Kp_yaw = 5.0
 Ki_yaw = 0.01
@@ -70,7 +70,7 @@ Ki_z_t = 0.01
 # desired
 X_d = 0.1;
 Y_d = 0.6;
-Z_d = -0.8;
+Z_d = -0.75;
 yaw_d 	= 0.0;
 
 
@@ -121,7 +121,7 @@ phi_t 	= 0.0;
 theta_t = 0.0;
 psi_t 	= 0.0;
 
-LP_aruco = 1.0
+LP_aruco = 0.7
 
 LP_aruco1 = 0.5
 # autonomy mode or aruco mode
@@ -177,6 +177,7 @@ def aruco_callback(data):
 	global LP_aruco, LP_aruco1
 
 	global fo, filename, file_write_ctr
+	global err_sum_y
 
 	dt1 = rospy.get_time() - aruco_detect_time
 	aruco_detect_time = rospy.get_time()
@@ -238,6 +239,7 @@ def aruco_callback(data):
 
 	if(autonomy_mode):
 		print('entering aruco_mode')
+		# err_sum_y = 0
 	autonomy_mode = False
 
 def Rdo_callback(data):
@@ -263,6 +265,7 @@ def constrain(x, a, b):
 	return x
 
 err_X_prev = 0
+err_Y_prev = 0
 def autonomy_control():
 	global Kp_x, Kp_y, Kp_z, Kd_x, Kd_y, Kd_z, Ki_x, Ki_y, Ki_z
 	global Kp_x_t, Kp_y_t, Kp_z_t, Kd_x_t, Kd_y_t, Kd_z_t, Ki_x_t, Ki_y_t, Ki_z_t
@@ -278,7 +281,7 @@ def autonomy_control():
 
 	global err_sum_xint, err_sum_yint, Ki_xint, Ki_yint
 
-	global err_X_prev
+	global err_X_prev, err_Y_prev
 
 	if (autonomy_mode):
 		err_X = X_d - X
@@ -297,15 +300,28 @@ def autonomy_control():
 	err_sum_yaw = constrain(err_sum_yaw + err_yaw, -10.0/Ki_yaw, 10.0/Ki_yaw)
 
 
-	xdd = Kp_x * err_X + 120 * Kd_x * (err_X - err_X_prev) + Ki_x * err_sum_x
+	# xdd = Kp_x * err_X + 120 * Kd_x * (err_X - err_X_prev) + Ki_x * err_sum_x
+	if (autonomy_mode):
+		ydd = Kp_y * err_Y + 2*Kd_y * (0.0 - VY) + Ki_y * err_sum_y
+		xdd = Kp_x * err_X + 2*Kd_x * (0.0 - VX) + Ki_x * err_sum_x
+	else:
+		# ydd = 1.0 * err_Y + 80 * 2.5 * (err_Y - err_Y_prev) + 0.0005 * err_sum_y
+		# ydd = 3.0 * err_Y + 500 * 2.5 * (err_Y - err_Y_prev) + 0.0001 * err_sum_y + Kd_y * (0.0 - VY) 
+		xdd = Kp_x * err_X + Kd_x * (0.0 - VX) + Ki_x * err_sum_x + 120 * Kd_x * (err_X - err_X_prev)
+		ydd = Kp_y * err_Y + Kd_y * (0.0 - VY) + Ki_y * err_sum_y + 120 * Kd_y * (err_Y - err_Y_prev)
+		# print(err_sum_y)
+	
 	# xdd = Kp_x * err_X + Kd_x * (0.0 - VX) + Ki_x * err_sum_x
-	ydd = Kp_y * err_Y + Kd_y * (0.0 - VY) + Ki_y * err_sum_y
+	# ydd = Kp_y * err_Y + Kd_y * (0.0 - VY) + Ki_y * err_sum_y
 	zdd = Kp_z * err_Z + Kd_z * (0.0 - VZ) + Ki_z * err_sum_z
 
 	r_d	= Kp_yaw * err_yaw + Ki_yaw * err_sum_yaw
 
 
 	err_X_prev = err_X
+	err_Y_prev = err_Y
+
+	# print(err_Y)
 	
 
 	return xdd, ydd, zdd, r_d
@@ -316,6 +332,8 @@ def main():
 	global x_k_x, x_k_y, x_k_z
 
 	global meas, v2p, yaw_d, psi_t, X_t_F, Y_t_F, Z_t_F, X, VX_t, VY_t, VZ_t
+
+	global autonomy_mode, aruco_detect_time
 
 	ctrl 	= Twist();
 	states 	= Twist();
@@ -341,6 +359,12 @@ def main():
 	rate = rospy.Rate(Hz)#100 Hz
 	while not rospy.is_shutdown():
 		try:
+
+			# print(rospy.get_time() - aruco_detect_time)
+			if(autonomy_mode == False and rospy.get_time() - aruco_detect_time >= 0.5):
+				autonomy_mode = True
+				print("leaving aruco")
+				# err_sum_y = 0
 		
 			# print(rospy.get_time())
 			xdd, ydd, zdd, r_d = autonomy_control()
@@ -377,8 +401,8 @@ def main():
 			ctrl.linear.x    = radio_on
 			ctrl.linear.y 	= 0.0
 			ctrl.linear.z 	= constrain(T_d * Thrust_sf, 0.0, 2.75)
-			ctrl.angular.x 	= constrain(phi_d * 180.0/np.pi, -25.0, 25.0) 
-			ctrl.angular.y 	= constrain(theta_d * 180.0/np.pi, -25.0, 25.0)
+			ctrl.angular.x 	= constrain(phi_d * 180.0/np.pi, -10.0, 10.0) 
+			ctrl.angular.y 	= constrain(theta_d * 180.0/np.pi, -10.0, 10.0)
 			ctrl.angular.z 	= constrain(r_d * 180.0/np.pi, -30, 30)
 			pub.publish(ctrl);
 
