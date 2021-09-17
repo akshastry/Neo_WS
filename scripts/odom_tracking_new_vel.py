@@ -26,7 +26,7 @@ Thrust_sf = 2.3/(mass*g);
 radio_on = 0
 
 
-Kp_x = 1.0#2.5
+Kp_x = 1.5#2.5
 Kd_x = 1.5#0.001
 Ki_x = 0.003
 
@@ -68,8 +68,8 @@ Ki_z_t = 0.01
 
 
 # desired
-X_d = 0.1;
-Y_d = 0.6;
+X_d = 0.5;
+Y_d = 0.0;
 Z_d = -0.75;
 yaw_d 	= 0.0;
 
@@ -308,7 +308,7 @@ def autonomy_control():
 		# ydd = 1.0 * err_Y + 80 * 2.5 * (err_Y - err_Y_prev) + 0.0005 * err_sum_y
 		# ydd = 3.0 * err_Y + 500 * 2.5 * (err_Y - err_Y_prev) + 0.0001 * err_sum_y + Kd_y * (0.0 - VY) 
 		xdd = Kp_x * err_X + Kd_x * (0.0 - VX) + Ki_x * err_sum_x + 120 * Kd_x * (err_X - err_X_prev)
-		ydd = Kp_y * err_Y + Kd_y * (0.0 - VY) + Ki_y * err_sum_y + 120 * Kd_y * (err_Y - err_Y_prev)
+		ydd = Kp_y * err_Y + Kd_y * (0.0 - VY) + Ki_y * err_sum_y + 80 * Kd_y * (err_Y - err_Y_prev)
 		# print(err_sum_y)
 	
 	# xdd = Kp_x * err_X + Kd_x * (0.0 - VX) + Ki_x * err_sum_x
