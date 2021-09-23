@@ -152,7 +152,7 @@ def Kalman_Filter1(x_k, P_k, u_k, z_k, sigma_P2, sigma_M2, dt1):
 	F_KF = np.array([[1.0, dt1], [0.0, 1.0]])
 	F_KF_T = F_KF.T
 
-	Q_KF = np.array([[0.25*dt1**4, 0.5*dt1**3], [0.5*dt1**3, dt1**2]])	
+	Q_KF = np.array([[1.0/3.0*dt1**3.0, 0.5*dt1**2.0], [0.5*dt1**2.0, 1.0*dt1]])	
 
 	x_k[0] = F_KF[0,0] * x_k[0] + F_KF[0,1] * x_k[1] + 0.5*dt1**2 * u_k
 	x_k[1] = F_KF[1,0] * x_k[0] + F_KF[1,1] * x_k[1] + dt1 * u_k
@@ -170,10 +170,10 @@ def Kalman_Filter1(x_k, P_k, u_k, z_k, sigma_P2, sigma_M2, dt1):
 	x_k[0] = x_k[0] + K_KF[0] * y_tilda
 	x_k[1] = x_k[1] + K_KF[1] * y_tilda
 
-	P_k[0][0] = (1.0 - K_KF[0])*P_k1[0][0] + 0.0 * P_k1[1][0]  
-	P_k[0][1] = (1.0 - K_KF[0])*P_k1[0][1] + 0.0 * P_k1[1][1] 
-	P_k[1][0] = 	 - K_KF[1] *P_k1[0][0] + 1.0 * P_k1[1][0]
-	P_k[1][1] = 	 - K_KF[1] *P_k1[0][1] + 1.0 * P_k1[1][1]
+	P_k[0][0] = (1.0 - K_KF[0]) * P_k1[0][0] + 0.0 * P_k1[1][0]  
+	P_k[0][1] = (1.0 - K_KF[0]) * P_k1[0][1] + 0.0 * P_k1[1][1] 
+	P_k[1][0] = 	 - K_KF[1]  * P_k1[0][0] + 1.0 * P_k1[1][0]
+	P_k[1][1] = 	 - K_KF[1]  * P_k1[0][1] + 1.0 * P_k1[1][1]
 
 	return x_k, P_k
 
