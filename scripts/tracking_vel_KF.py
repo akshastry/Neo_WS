@@ -16,7 +16,7 @@ from datetime import datetime
 now = datetime.now() # current date and time
 filename = "/home/su/Dropbox/Quadrotor_flight_control/Arduino_playground/LOGS/odom_logs/"
 filename += now.strftime("%Y_%m_%d_%H_%M_%S")
-filename += "speed=5__1.csv"
+filename += "speed=5.csv"
 
 
 mass = 1.46; # mass of quad
@@ -26,11 +26,11 @@ Thrust_sf = 2.3/(mass*g);
 radio_on = 0
 
 
-Kp_x = 1.0#2.5
+Kp_x = 1.0#0.5#0.2#2.5
 Kd_x = 1.5#0.001
-Ki_x = 0.004
+Ki_x = 0.005
 
-Kp_y = 1.0#2.5
+Kp_y = 1.0#0.5#0.2#2.5
 Kd_y = 1.5#0.001
 Ki_y = 0.005
 
@@ -309,43 +309,43 @@ def aruco_callback(data):
 	# X_t02 = X_t2
 	# Y_t02 = Y_t2
 
-	x_k, Px_k = Kalman_Filter1(x_k, Px_k, -aX, X_t2, 10**(-3.0), 10**(-3.0), 0.03*10**(-4.0), dt1)
-	y_k, Py_k = Kalman_Filter1(y_k, Py_k, -aY, Y_t2, 10**(-3.0), 10**(-3.0), 0.03*10**(-4.0), dt1)
+	x_k, Px_k = Kalman_Filter1(x_k, Px_k, -aX, X_t2, 10**(-3.0), 10**(-3.0), 0.1*10**(-4.0), dt1)
+	y_k, Py_k = Kalman_Filter1(y_k, Py_k, -aY, Y_t2, 10**(-3.0), 10**(-3.0), 0.1*10**(-4.0), dt1)
 	# rospy.loginfo("%f, %f\n", y_k[0], Y_t1)
 
 	#get orientation
-	q0 = data.pose.orientation.w
-	q1 = data.pose.orientation.x
-	q2 = data.pose.orientation.y
-	q3 = data.pose.orientation.z
+	# q0 = data.pose.orientation.w
+	# q1 = data.pose.orientation.x
+	# q2 = data.pose.orientation.y
+	# q3 = data.pose.orientation.z
 
-	cmra2mrkr = R.from_quat([q1, q2, q3, q0])
-	bdy2cmra  = R.from_euler('ZYX', [np.pi/2.0, 0.0 ,0.0])
-	mrkr2trgt = R.from_euler('ZYX', [np.pi/2.0, 0.0, np.pi]) # mrkr is aruco marker frame, trgt is same frame but with axes parallel to body axes
+	# cmra2mrkr = R.from_quat([q1, q2, q3, q0])
+	# bdy2cmra  = R.from_euler('ZYX', [np.pi/2.0, 0.0 ,0.0])
+	# mrkr2trgt = R.from_euler('ZYX', [np.pi/2.0, 0.0, np.pi]) # mrkr is aruco marker frame, trgt is same frame but with axes parallel to body axes
 
-	bdy2trgt = bdy2cmra * cmra2mrkr * mrkr2trgt
-	psi, theta, phi = bdy2trgt.as_euler('ZYX')
+	# bdy2trgt = bdy2cmra * cmra2mrkr * mrkr2trgt
+	# psi, theta, phi = bdy2trgt.as_euler('ZYX')
 
-	psi_t 	= (1 - LP_aruco1) * psi_t 	+ LP_aruco1 * psi
+	# psi_t 	= (1 - LP_aruco1) * psi_t 	+ LP_aruco1 * psi
 	# theta_t = (1 - LP_aruco1) * theta_t + LP_aruco1 * theta
 	# phi_t 	= (1 - LP_aruco1) * phi_t 	+ LP_aruco1 * phi
 
 
 
-	dyaw_d = 0.01 * (psi_t)# - np.pi/2.0)
-	yaw_d = yaw_d + dyaw_d
+	# dyaw_d = 0.01 * (psi_t)# - np.pi/2.0)
+	# yaw_d = yaw_d + dyaw_d
 
 
 	# data = "%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n"%(rospy.get_time(), X_t1, Y_t1, Z_t1, X_t2, Y_t2, Z_t2, X1, Y1, Z1, X2, Y2, Z2, VX1, VY1, VX2, VY2, pose_received_time, X, Y, Z, VX, VY, VZ, y_k[0], y_k[1])
-	data = "%f,%f,%f,%f,%f\n"%(aruco_detect_time, x_k[0], y_k[0], x_k[1], y_k[1])
+	# data = "%f,%f,%f,%f,%f\n"%(aruco_detect_time, x_k[0], y_k[0], x_k[1], y_k[1])
 	
-	fo.write(data)
-	file_write_ctr = file_write_ctr  + 1
+	# fo.write(data)
+	# file_write_ctr = file_write_ctr  + 1
 	
-	if(file_write_ctr >=500):
-		fo.close()
-		fo = open(filename, "a")
-		file_write_ctr = 1
+	# if(file_write_ctr >=500):
+	# 	fo.close()
+	# 	fo = open(filename, "a")
+	# 	file_write_ctr = 1
 
 		
 	# print(yaw_d*180.0/np.pi)
@@ -437,8 +437,8 @@ def autonomy_control():
 		# ydd = 3.0 * err_Y + 500 * 2.5 * (err_Y - err_Y_prev) + 0.0001 * err_sum_y + Kd_y * (0.0 - VY) 
 		# xdd = Kp_x * err_X + Kd_x * (0.0 - VX) + Ki_x * err_sum_x + 120 * Kd_x * (err_X - err_X_prev)#+ 3 * Kd_x * VX2
 		# xdd = Kp_x * err_X + 1.6 * Kd_x * (0.0 - VX) + Ki_x * err_sum_x +  1.5 * Kd_x * VX2
-		xdd = Kp_x * err_X + 1.6 * Kd_x * (0.0 - VX) + Ki_x * err_sum_x + 1.7 * Kd_x * x_k[1]
-		ydd = Kp_y * err_Y + 1.3 * Kd_y * (0.0 - VY) + Ki_y * err_sum_y + 1.8 * Kd_y * y_k[1]
+		xdd = Kp_x * err_X + 0.4 * Kd_x * (0.0 - VX) + Ki_x * err_sum_x + 1.8 * Kd_x * x_k[1]
+		ydd = Kp_y * err_Y + 0.5 * Kd_y * (0.0 - VY) + Ki_y * err_sum_y + 1.8 * Kd_y * y_k[1]
 
 		# ydd = Kp_y * err_Y + Kd_y * (0.0 - VY) + Ki_y * err_sum_y + 80 * Kd_y * (err_Y - err_Y_prev)
 		# print(err_sum_y)
