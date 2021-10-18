@@ -27,11 +27,11 @@ radio_on = 0
 
 
 Kp_x = 1.0#0.5#0.2#2.5
-Kd_x = 1.5#0.001
+Kd_x = 3.0#0.001
 Ki_x = 0.005
 
 Kp_y = 1.0#0.5#0.2#2.5
-Kd_y = 1.5#0.001
+Kd_y = 3.0#0.001
 Ki_y = 0.005
 
 Kp_z = 5.0#2.0#2.0
@@ -311,6 +311,14 @@ def aruco_callback(data):
 
 	x_k, Px_k = Kalman_Filter1(x_k, Px_k, -aX, X_t2, 10**(-3.0), 10**(-3.0), 0.1*10**(-4.0), dt1)
 	y_k, Py_k = Kalman_Filter1(y_k, Py_k, -aY, Y_t2, 10**(-3.0), 10**(-3.0), 0.1*10**(-4.0), dt1)
+	
+	if (autonomy_mode == False and rospy.get_time() - delay_time > 1.0):
+		dX_d = 0.02 * x_k[0] + 0.03 * x_k[1]
+		dY_d = 0.02 * y_k[0] + 0.03 * y_k[1]
+
+		X_d = X_d + dX_d
+		Y_d = Y_d + dY_d
+
 	# rospy.loginfo("%f, %f\n", y_k[0], Y_t1)
 
 	#get orientation
@@ -401,23 +409,9 @@ def autonomy_control():
 
 	global x_k, Px_k, aX, y_k, Py_k, aY, kalman_predict_time
 
-	if (autonomy_mode):
-		err_X = X_d - X
-		err_Y = Y_d - Y
-		err_Z = Z_d - Z
-	else:
-		curr_time = rospy.get_time()
-		dt1 	  = curr_time - kalman_predict_time
-		kalman_predict_time = curr_time
-
-		x_k, Px_k = Kalman_predict(x_k, Px_k, -aX, 10**(-3.0), 10**(-3.0), dt1)
-		y_k, Py_k = Kalman_predict(y_k, Py_k, -aY, 10**(-3.0), 10**(-3.0), dt1)
-
-		err_X = x_k[0]
-		err_Y = y_k[0]
-		err_Z = Z_d - Z
-		# err_Z = Z_t2
-	
+	err_X = X_d - X
+	err_Y = Y_d - Y
+	err_Z = Z_d - Z
 
 	# err_Z = Z_d - Z
 	err_yaw = yaw_d - yaw
@@ -428,31 +422,14 @@ def autonomy_control():
 	err_sum_yaw = constrain(err_sum_yaw + err_yaw, -10.0/Ki_yaw, 10.0/Ki_yaw)
 
 
-	# xdd = Kp_x * err_X + 120 * Kd_x * (err_X - err_X_prev) + Ki_x * err_sum_x
-	if (autonomy_mode == True or rospy.get_time() - delay_time < 1.0):
-		ydd = Kp_y * err_Y + 2*Kd_y * (0.0 - VY) + Ki_y * err_sum_y
-		xdd = Kp_x * err_X + 2*Kd_x * (0.0 - VX) + Ki_x * err_sum_x
-	else:
-		# ydd = 1.0 * err_Y + 80 * 2.5 * (err_Y - err_Y_prev) + 0.0005 * err_sum_y
-		# ydd = 3.0 * err_Y + 500 * 2.5 * (err_Y - err_Y_prev) + 0.0001 * err_sum_y + Kd_y * (0.0 - VY) 
-		# xdd = Kp_x * err_X + Kd_x * (0.0 - VX) + Ki_x * err_sum_x + 120 * Kd_x * (err_X - err_X_prev)#+ 3 * Kd_x * VX2
-		# xdd = Kp_x * err_X + 1.6 * Kd_x * (0.0 - VX) + Ki_x * err_sum_x +  1.5 * Kd_x * VX2
-		xdd = Kp_x * err_X + 0.4 * Kd_x * (0.0 - VX) + Ki_x * err_sum_x + 1.8 * Kd_x * x_k[1]
-		ydd = Kp_y * err_Y + 0.5 * Kd_y * (0.0 - VY) + Ki_y * err_sum_y + 1.8 * Kd_y * y_k[1]
+	xdd = Kp_x * err_X + Kd_x * (0.0 - VX) + Ki_x * err_sum_x
+	ydd = Kp_y * err_Y + Kd_y * (0.0 - VY) + Ki_y * err_sum_y
 
-		# ydd = Kp_y * err_Y + Kd_y * (0.0 - VY) + Ki_y * err_sum_y + 80 * Kd_y * (err_Y - err_Y_prev)
-		# print(err_sum_y)
-	
-	# xdd = Kp_x * err_X + Kd_x * (0.0 - VX) + Ki_x * err_sum_x
-	# ydd = Kp_y * err_Y + 2*Kd_y * (0.0 - VY) + Ki_y * err_sum_y
 	zdd = Kp_z * err_Z + Kd_z * (0.0 - VZ) + Ki_z * err_sum_z
 	# print(err_Z, zdd)
 
 	r_d	= Kp_yaw * err_yaw + Ki_yaw * err_sum_yaw
 
-
-	err_X_prev = err_X
-	err_Y_prev = err_Y
 
 	# print(err_Y)
 	

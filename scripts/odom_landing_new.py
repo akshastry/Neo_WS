@@ -26,17 +26,17 @@ Thrust_sf = 2.3/(mass*g);
 radio_on = 0
 
 
-Kp_x = 4.0#2.5
+Kp_x = 3.0#2.5
 Kd_x = 5.5#0.001
-Ki_x = 0.001
+Ki_x = 0.005;#0.001
 
-Kp_y = 4.0#2.5
+Kp_y = 3.0#2.5
 Kd_y = 5.5#0.001
-Ki_y = 0.001
+Ki_y = 0.005;#0.001
 
-Kp_z = 7.0#2.0
-Kd_z = 5.0#0.9
-Ki_z = 0.05
+Kp_z = 5.0#2.0
+Kd_z = 3.5#0.9
+Ki_z = 0.01;#0.05
 
 Kp_yaw = 5.0
 Ki_yaw = 0.01
@@ -68,8 +68,8 @@ Ki_z_t = 0.01
 
 
 # desired
-X_d = 0.1;
-Y_d = 0.6;
+X_d = 0.65;
+Y_d = 0.0;
 Z_d = -1.0;
 yaw_d 	= 0.0;
 
@@ -111,8 +111,8 @@ X_t = 0.0;
 Y_t = 0.0; 
 Z_t = 0.0;
 dX_t = 0.1;
-dY_t = 0.03;
-dZ_t = 0.7; # hieght above the marker to park the vehicle
+dY_t = 0.02;#0.03;
+dZ_t = 0.6; # hieght above the marker to park the vehicle
 phi_t 	= 0.0;
 theta_t = 0.0;
 psi_t 	= 0.0;
@@ -131,7 +131,7 @@ pose_received_time = 0.0
 
 #landing
 r_t = 0.025
-V_t = 0.04
+V_t = 0.03
 land_flag = False
 complete_land = False
 
@@ -158,6 +158,12 @@ def pos_vel_callback(data):
 	VZ = (1.0 - LP_VZ) * VZ + LP_VZ * data.angular.z;
 
 	pose_received_time = rospy.get_time()
+
+def accel_callback(data):
+	global complete_land
+	if(np.sqrt(data.z**2.0+data.y**2.0+data.x**2.0) > 25.0):
+		print("large accelration, stopping")
+		# complete_land = True
 
 def att_callback(data):
 	global yaw, pitch, roll, LP_yaw, LP_pitch, LP_roll
@@ -224,8 +230,8 @@ def aruco_callback(data):
 		ang_vel_ctr = 0
 	if(X_t**2.0 + Y_t**2.0 < r_t**2.0 and VX**2.0 + VY**2.0 + VZ**2.0 < V_t**2.0 and ang_vel_ctr >= 3):
 		# print('landing')
-		Z_d = Z_d + Z_t - 0.0
-		dZ_t = 0.0
+		# Z_d = Z_d + Z_t - 0.0
+		# dZ_t = -0.08
 		# Z_d = -0.01
 		land_flag = True
 		high_angle_ctr = 0
@@ -236,7 +242,7 @@ def aruco_callback(data):
 			
 			if(complete_land == False and Z_t > 0.3):
 				land_flag = False
-				dZ_t = 0.7
+				dZ_t = 0.6
 				rospy.loginfo('%f, %f, %f',X_t**2.0 + Y_t**2.0, VX**2.0 + VY**2.0, high_angle_ctr)
 
 		if(abs(phi_t*180.0/np.pi) > 4.0):# or abs(theta_t*180.0/np.pi) > 3.0):
@@ -247,26 +253,30 @@ def aruco_callback(data):
 
  	# track 
 
-	dX_d = 0.10 * X_t + 0.07 * (0.0 - VX)
-	dY_d = 0.10 * Y_t + 0.07 * (0.0 - VY)
-	dZ_d = 0.10 * (Z_t - dZ_t) + 0.05 * (0.0 - VZ)  
+	dX_d = 0.05 * X_t + 0.1 * (0.0 - VX)
+	dY_d = 0.05 * Y_t + 0.1 * (0.0 - VY)
+	dZ_d = 0.05 * (Z_t - dZ_t) + 0.1 * (0.0 - VZ)  
 
 	X_d = X_d + dX_d
 	Y_d = Y_d + dY_d
-	Z_d = Z_d + dZ_d
 	
+
+	if(land_flag == True):
+		Z_d = Z_d + Z_t - 0.3
+	else:
+		Z_d = Z_d + dZ_d
 
 	# save
 
-	data = "%f,%f,%f,%f,%f,%f,%f\n"%(rospy.get_time(), X_t, Y_t, Z_t, phi_t, theta_t, psi_t)
+	# data = "%f,%f,%f,%f,%f,%f,%f\n"%(rospy.get_time(), X_t, Y_t, Z_t, phi_t, theta_t, psi_t)
 
-	fo.write(data)
-	file_write_ctr = file_write_ctr  + 1
+	# fo.write(data)
+	# file_write_ctr = file_write_ctr  + 1
 	
-	if(file_write_ctr >=500):
-		fo.close()
-		fo = open(filename, "a")
-		file_write_ctr = 1
+	# if(file_write_ctr >=500):
+	# 	fo.close()
+	# 	fo = open(filename, "a")
+	# 	file_write_ctr = 1
 
 	# yaw_d = (1 - 0.5) * yaw_d + 0.5 * (yaw + psi_t)
 	# print(yaw_d*180.0/np.pi)
@@ -340,7 +350,7 @@ def autonomy_control():
 
 	xd = constrain(xd, -0.5, 0.5)
 	yd = constrain(yd, -0.5, 0.5)
-	zd = constrain(zd, -0.4, 0.4)
+	zd = constrain(zd, -0.45, 0.4)
 
 	xdd = Kd_x * (xd - VX) + Ki_x * err_sum_x
 	ydd = Kd_y * (yd - VY) + Ki_y * err_sum_y
@@ -394,6 +404,7 @@ def main():
 
 	rospy.Subscriber('/aruco_single/pose', 			   PoseStamped, aruco_callback)	
 	rospy.Subscriber('/rs_t265/position_and_velocity', Twist, 		pos_vel_callback)
+	rospy.Subscriber('/rs_t265/acceleration', 		   Vector3, 	accel_callback)
 	rospy.Subscriber('/rs_t265/attitude', 			   Vector3, 	att_callback)
 	# rospy.Subscriber('/serialcom/alt_vel_des', 		   Vector3, 	Alt_vel_callback)
 	# rospy.Subscriber('/serialcom/yaw_des', 			   Float64, 	yawd_callback)
@@ -425,11 +436,18 @@ def main():
 				phi_d	  = 0.0*np.pi/180.0
 				theta_d	  = 0.0*np.pi/180.0
 
-			if(land_flag == True and Z_t <= 0.1):
-				complete_land = True
+			if(land_flag == True):
+				if(Z_d - Z <= 0.1):
+					complete_land = True
+				else:
+					print(Z_d, Z)
 
 			if(complete_land == True):
-				T_d = 0.0
+				print("land_completed")
+				T_d 			= 0.0
+				phi_d	  		= 0.0*np.pi/180.0
+				theta_d	  		= 0.0*np.pi/180.0
+				r_d 			= 0.0
 
 			# # publish to a topic
 			# if(rospy.get_time() - pose_received_time < 1.0/30.0):
@@ -442,8 +460,8 @@ def main():
 			ctrl.linear.x    = radio_on
 			ctrl.linear.y 	= 0.0
 			ctrl.linear.z 	= constrain(T_d * Thrust_sf, 0.0, 2.75)
-			ctrl.angular.x 	= constrain(phi_d * 180.0/np.pi, -25.0, 25.0) 
-			ctrl.angular.y 	= constrain(theta_d * 180.0/np.pi, -25.0, 25.0)
+			ctrl.angular.x 	= constrain(phi_d * 180.0/np.pi, -10.0, 10.0) 
+			ctrl.angular.y 	= constrain(theta_d * 180.0/np.pi, -10.0, 10.0)
 			ctrl.angular.z 	= constrain(r_d * 180.0/np.pi, -30, 30)
 			pub.publish(ctrl);
 

@@ -220,13 +220,21 @@ aX = 0; aY = 0; aZ = 0;
 accel_received_time = 0.0;
 std_dev = 0.0
 n_std = 0
+complete_land = False
+descend = False
 def accel_callback(data):
 	global aX, aY, aZ, accel_received_time
+	global complete_land, descend
 	# global std_dev, n_std
 
 	aX = (1-0.9) * aX + 0.9 * data.x
 	aY = (1-0.9) * aY + 0.9 * data.y
 	aZ = (1-0.9) * aZ + 0.9 * data.z
+
+	if(descend == True):
+		# print(data.z)
+		if(  data.z < -7.0):
+			complete_land = True
 
 	# std_dev = np.sqrt((std_dev**2.0 * n_std + aY**2.0)/ (n_std + 1))
 	# n_std = n_std + 1
@@ -292,7 +300,7 @@ def aruco_callback(data):
 	# Z_t1 = 	Z_t - dZ_t
 
 	body2inert = R.from_euler('ZYX', [yaw, pitch ,roll])
-	X_t2, Y_t2, Z_t2 = body2inert.apply([X_t, Y_t, Z_t]) + np.matmul(body2inert.as_dcm() - np.eye(3), [0.14, 0.0, 0.0]) - [0.0, dY_t, dZ_t]
+	X_t2, Y_t2, Z_t2 = body2inert.apply([X_t, Y_t, Z_t]) + np.matmul(body2inert.as_dcm() - np.eye(3), [0.14, 0.0, 0.0]) - [0.0, dY_t, 0.0]
 
 	# X1, Y1, Z1 = np.array([X, Y, Z]) + np.array([VX, VY, VZ])*(aruco_detect_time - pose_received_time) \
 	# 			 + body2inert.apply([X_t + 0.14, Y_t, Z_t])
@@ -401,10 +409,13 @@ def autonomy_control():
 
 	global x_k, Px_k, aX, y_k, Py_k, aY, kalman_predict_time
 
+	global descend
+
 	if (autonomy_mode):
 		err_X = X_d - X
 		err_Y = Y_d - Y
 		err_Z = Z_d - Z
+		Z_d_dot = 0.0
 	else:
 		curr_time = rospy.get_time()
 		dt1 	  = curr_time - kalman_predict_time
@@ -415,7 +426,21 @@ def autonomy_control():
 
 		err_X = x_k[0]
 		err_Y = y_k[0]
-		err_Z = Z_d - Z
+		if(descend == False):
+			if(x_k[0]**2.0 + y_k[0]**2.0 < 0.05**2.0 and x_k[1]**2.0 + y_k[1]**2.0 < 0.12**2.0):
+				descend = True
+				err_Z = 0.0
+				Z_d_dot = 0.4
+			else:
+				Z_d = -0.75
+				err_Z = Z_d - Z
+				Z_d_dot = 0.0
+		else:
+			err_Z = 0.0
+			Z_d_dot = 0.7
+
+		
+
 		# err_Z = Z_t2
 	
 
@@ -445,7 +470,7 @@ def autonomy_control():
 	
 	# xdd = Kp_x * err_X + Kd_x * (0.0 - VX) + Ki_x * err_sum_x
 	# ydd = Kp_y * err_Y + 2*Kd_y * (0.0 - VY) + Ki_y * err_sum_y
-	zdd = Kp_z * err_Z + Kd_z * (0.0 - VZ) + Ki_z * err_sum_z
+	zdd = Kp_z * err_Z + Kd_z * (Z_d_dot - VZ) + Ki_z * err_sum_z
 	# print(err_Z, zdd)
 
 	r_d	= Kp_yaw * err_yaw + Ki_yaw * err_sum_yaw
@@ -466,9 +491,9 @@ def main():
 
 	global meas, v2p, yaw_d, psi_t, X_t_F, Y_t_F, Z_t_F, X, VX_t, VY_t, VZ_t
 
-	global autonomy_mode, aruco_detect_time
+	global autonomy_mode, aruco_detect_time, complete_land, descend
 
-	global Y_t2, y_k
+	global Y_t2, y_k, Z, Z_t2
 
 	ctrl 	= Twist();
 	states 	= Twist();
@@ -497,9 +522,10 @@ def main():
 		try:
 
 			# print(rospy.get_time() - aruco_detect_time)
-			if(autonomy_mode == False and rospy.get_time() - aruco_detect_time >= 0.5):
+			if(autonomy_mode == False and rospy.get_time() - aruco_detect_time >= 0.5 and descend == False):
 				autonomy_mode = True
 				print("leaving aruco")
+				Z_d = -0.75
 				# err_sum_y = 0
 		
 			# print(rospy.get_time())
@@ -525,6 +551,13 @@ def main():
 				phi_d	  	= 0.0*np.pi/180.0
 				theta_d	  	= 0.0*np.pi/180.0
 				r_d 		= 0.0
+
+
+			if(complete_land == True):
+				T_d 			= 0.0
+				phi_d	  		= 0.0*np.pi/180.0
+				theta_d	  		= 0.0*np.pi/180.0
+				r_d 			= 0.0
 
 			
 			# # publish to a topic
