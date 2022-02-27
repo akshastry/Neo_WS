@@ -114,8 +114,8 @@ X_t1 = 0.0;
 Y_t1 = 0.0; 
 Z_t1 = 0.0;
 
-dX_t = 0.1;
-dY_t = 0.03;
+dX_t = 0.15;
+dY_t = 0.06;
 dZ_t = 0.5; # hieght above the marker to park the vehicle
 phi_t 	= 0.0;
 theta_t = 0.0;
@@ -249,6 +249,8 @@ Px_k = np.array([[1.0, 0.0],[0.0 ,1.0]])
 X_t2 = 0
 Y_t2 = 0
 Z_t2 = 0
+# tmp = rospy.Publisher('neo/KF', UInt8, queue_size=1)
+# tmp1 = UInt8()
 def aruco_callback(data):
 	global X_t, Y_t, Z_t, phi_t, theta_t, psi_t
 	global X_t1, Y_t1, Z_t1, X_t0, Y_t0, X_t02, Y_t02
@@ -355,6 +357,7 @@ def aruco_callback(data):
 		delay_time = rospy.get_time()
 		# err_sum_y = 0
 	autonomy_mode = False
+	# tmp.publish(tmp1)
 
 def Rdo_callback(data):
 	global err_sum_x, err_sum_y, err_sum_z, err_sum_yaw, radio_on,   X_d, Y_d, X, Y
@@ -437,8 +440,8 @@ def autonomy_control():
 		# ydd = 3.0 * err_Y + 500 * 2.5 * (err_Y - err_Y_prev) + 0.0001 * err_sum_y + Kd_y * (0.0 - VY) 
 		# xdd = Kp_x * err_X + Kd_x * (0.0 - VX) + Ki_x * err_sum_x + 120 * Kd_x * (err_X - err_X_prev)#+ 3 * Kd_x * VX2
 		# xdd = Kp_x * err_X + 1.6 * Kd_x * (0.0 - VX) + Ki_x * err_sum_x +  1.5 * Kd_x * VX2
-		xdd = Kp_x * err_X + 0.4 * Kd_x * (0.0 - VX) + Ki_x * err_sum_x + 1.8 * Kd_x * x_k[1]
-		ydd = Kp_y * err_Y + 0.5 * Kd_y * (0.0 - VY) + Ki_y * err_sum_y + 1.8 * Kd_y * y_k[1]
+		xdd = Kp_x * err_X + 0.8 * Kd_x * (0.0 - VX) + Ki_x * err_sum_x + 1.8 * Kd_x * x_k[1]
+		ydd = Kp_y * err_Y + 0.9 * Kd_y * (0.0 - VY) + Ki_y * err_sum_y + 1.8 * Kd_y * y_k[1]
 
 		# ydd = Kp_y * err_Y + Kd_y * (0.0 - VY) + Ki_y * err_sum_y + 80 * Kd_y * (err_Y - err_Y_prev)
 		# print(err_sum_y)
