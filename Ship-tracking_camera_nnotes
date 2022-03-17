@@ -29,4 +29,7 @@ The camera axis centered on the image with x-axis along quad y(or along the lett
 The aruco marker tracking gives pose of the aruco marker in camera frame
 
 
+to use: fish_eye_camera_1.yaml (30Hz fisheye), 60Hz_camera.yaml (60 Hz fisheye)
+
+
 

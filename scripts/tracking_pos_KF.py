@@ -429,7 +429,7 @@ def autonomy_control():
 
 
 	# xdd = Kp_x * err_X + 120 * Kd_x * (err_X - err_X_prev) + Ki_x * err_sum_x
-	if (autonomy_mode == True or rospy.get_time() - delay_time < 0.5):
+	if (autonomy_mode == True):
 		ydd = Kp_y * err_Y + 2*Kd_y * (0.0 - VY) + Ki_y * err_sum_y
 		xdd = Kp_x * err_X + 2*Kd_x * (0.0 - VX) + Ki_x * err_sum_x
 	else:
@@ -437,8 +437,8 @@ def autonomy_control():
 		# ydd = 3.0 * err_Y + 500 * 2.5 * (err_Y - err_Y_prev) + 0.0001 * err_sum_y + Kd_y * (0.0 - VY) 
 		# xdd = Kp_x * err_X + Kd_x * (0.0 - VX) + Ki_x * err_sum_x + 120 * Kd_x * (err_X - err_X_prev)#+ 3 * Kd_x * VX2
 		# xdd = Kp_x * err_X + 1.6 * Kd_x * (0.0 - VX) + Ki_x * err_sum_x +  1.5 * Kd_x * VX2
-		ydd = Kp_y * err_Y + 2*Kd_y * (0.0 - VY) + Ki_y * err_sum_y
-		xdd = Kp_x * err_X + 2*Kd_x * (0.0 - VX) + Ki_x * err_sum_x
+		ydd = 4.0 * err_Y + 5.5 * (0.0 - VY) + Ki_y * err_sum_y
+		xdd = 4.0 * err_X + 5.5 * (0.0 - VX) + Ki_x * err_sum_x
 
 		# xdd = Kp_x * err_X + 0.8 * Kd_x * (0.0 - VX) + Ki_x * err_sum_x + 1.5 * Kd_x * x_k[1]
 		# ydd = Kp_y * err_Y + 0.8 * Kd_y * (0.0 - VY) + Ki_y * err_sum_y + 1.5* Kd_y * y_k[1]
