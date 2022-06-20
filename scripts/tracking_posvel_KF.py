@@ -274,12 +274,8 @@ def aruco_callback(data):
 	# X_t = -data.pose.position.y# + 0.125
 	# Y_t = data.pose.position.x
 	# Z_t = data.pose.position.z
-	# X_t = (1 - LP_aruco) * X_t + LP_aruco * (-data.pose.position.y)
-	# Y_t = (1 - LP_aruco) * Y_t + LP_aruco * data.pose.position.x
-	# Z_t = (1 - LP_aruco) * Z_t + LP_aruco * data.pose.position.z
-
-	X_t = (1 - LP_aruco) * X_t + LP_aruco * data.pose.position.x
-	Y_t = (1 - LP_aruco) * Y_t + LP_aruco * data.pose.position.y
+	X_t = (1 - LP_aruco) * X_t + LP_aruco * (-data.pose.position.y)
+	Y_t = (1 - LP_aruco) * Y_t + LP_aruco * data.pose.position.x
 	Z_t = (1 - LP_aruco) * Z_t + LP_aruco * data.pose.position.z
 
 	# X_d = (1 - 0.5) * X_d + 0.5 * ((X_t - dX_t) + X)
@@ -313,9 +309,24 @@ def aruco_callback(data):
 	# X_t02 = X_t2
 	# Y_t02 = Y_t2
 
-	x_k, Px_k = Kalman_Filter1(x_k, Px_k, -aX, X_t2, 10**(-3.0), 10**(-3.0), 0.1*10**(-4.0), dt1)
-	y_k, Py_k = Kalman_Filter1(y_k, Py_k, -aY, Y_t2, 10**(-3.0), 10**(-3.0), 0.1*10**(-4.0), dt1)
+
+
+	# x_k, Px_k = Kalman_Filter1(x_k, Px_k, -aX, X_t2, 10**(-3.0), 10**(-3.0), 3*10**(-4.0), dt1)
+	# y_k, Py_k = Kalman_Filter1(y_k, Py_k, -aY, Y_t2, 10**(-3.0), 10**(-3.0), 3*10**(-4.0), dt1)
+	x_k, Px_k = Kalman_Filter1(x_k, Px_k, -aX, X_t2, 10**(-3.0), 10**(-3.0), 3*10**(-4.0), dt1)
+	y_k, Py_k = Kalman_Filter1(y_k, Py_k, -aY, Y_t2, 10**(-3.0), 10**(-3.0), 3*10**(-4.0), dt1)
+
 	# rospy.loginfo("%f, %f\n", y_k[0], Y_t1)
+
+	if(autonomy_mode):
+		print('entering aruco_mode')
+		delay_time = rospy.get_time()
+		y_k  = np.array([Y_t2, 0.0])
+		Py_k = np.array([[1.0, 0.0],[0.0 ,1.0]])
+		x_k  = np.array([X_t2, 0.0])
+		Px_k = np.array([[1.0, 0.0],[0.0 ,1.0]])
+		# err_sum_y = 0
+	autonomy_mode = False
 
 	#get orientation
 	# q0 = data.pose.orientation.w
@@ -354,11 +365,8 @@ def aruco_callback(data):
 		
 	# print(yaw_d*180.0/np.pi)
 
-	if(autonomy_mode):
-		print('entering aruco_mode')
-		delay_time = rospy.get_time()
-		# err_sum_y = 0
-	autonomy_mode = False
+	
+	
 
 def Rdo_callback(data):
 	global err_sum_x, err_sum_y, err_sum_z, err_sum_yaw, radio_on,   X_d, Y_d, X, Y
@@ -441,11 +449,15 @@ def autonomy_control():
 		# ydd = 3.0 * err_Y + 500 * 2.5 * (err_Y - err_Y_prev) + 0.0001 * err_sum_y + Kd_y * (0.0 - VY) 
 		# xdd = Kp_x * err_X + Kd_x * (0.0 - VX) + Ki_x * err_sum_x + 120 * Kd_x * (err_X - err_X_prev)#+ 3 * Kd_x * VX2
 		# xdd = Kp_x * err_X + 1.6 * Kd_x * (0.0 - VX) + Ki_x * err_sum_x +  1.5 * Kd_x * VX2
-		ydd = 4.0 * err_Y + 5.5 * (0.0 - VY) + Ki_y * err_sum_y
-		xdd = 4.0 * err_X + 5.5 * (0.0 - VX) + Ki_x * err_sum_x
+		# if(rospy.get_time() - delay_time <= 5.0):
+		# 	ydd = 4.0 * err_Y + 5.5 * (0.0 - VY) + Ki_y * err_sum_y
+		# 	xdd = 4.0 * err_X + 5.5 * (0.0 - VX) + Ki_x * err_sum_x
+		# else:
+		# ydd = 4.0 * err_Y + 5.5 * (0.0 - VY) + Ki_y * err_sum_y + 2.0 * y_k[1]
+		# xdd = 4.0 * err_X + 5.5 * (0.0 - VX) + Ki_x * err_sum_x + 2.0 * x_k[1]
 
-		# ydd = 6.3 * err_Y + 5.0 * (0.0 - VY) + 0.02 * err_sum_y
-		# xdd = 6.3 * err_X + 5.0 * (0.0 - VX) + 0.02 * err_sum_x
+		ydd = 4.0 * err_Y + 5.5 * (0.0 - VY) + Ki_y * err_sum_y + 2.0 * y_k[1]
+		xdd = 4.0 * err_X + 5.5 * (0.0 - VX) + Ki_x * err_sum_x + 2.0 * x_k[1]
 
 		# xdd = Kp_x * err_X + 0.8 * Kd_x * (0.0 - VX) + Ki_x * err_sum_x + 1.5 * Kd_x * x_k[1]
 		# ydd = Kp_y * err_Y + 0.8 * Kd_y * (0.0 - VY) + Ki_y * err_sum_y + 1.5* Kd_y * y_k[1]

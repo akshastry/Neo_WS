@@ -33,7 +33,7 @@ void Capture::loadCameraInfo()
     }
   }
 
-  rescale_camera_info_ = node_.param<bool>("rescale_camera_info", false);
+  rescale_camera_info_ = node_.param<bool>("rescale_camera_info", true);
 
   for (int i = 0;; ++i)
   {
@@ -79,6 +79,8 @@ void Capture::rescaleCameraInfo(int width, int height)
 void Capture::open(int32_t device_id)
 {
   cap_.open(device_id);
+  cap_.set(cv::CAP_PROP_FRAME_WIDTH,640);
+  cap_.set(cv::CAP_PROP_FRAME_HEIGHT,480);
   if (!cap_.isOpened())
   {
     std::stringstream stream;

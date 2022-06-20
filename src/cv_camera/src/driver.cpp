@@ -5,7 +5,7 @@
 
 namespace
 {
-const double DEFAULT_RATE = 60.0;
+const double DEFAULT_RATE = 100.0;
 const int32_t PUBLISHER_BUFFER_SIZE = 1;
 }
 
@@ -35,8 +35,8 @@ void Driver::setup()
     camera_name = frame_id;
   }
 
-  int32_t image_width(640);
-  int32_t image_height(480);
+  int32_t image_width(960);
+  int32_t image_height(600);
 
   camera_.reset(new Capture(camera_node_,
                             "image_raw",

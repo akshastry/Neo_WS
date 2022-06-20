@@ -5,8 +5,8 @@
 		<param name="cv_camera/cv_cap_prop_fps" type="double" value="100"/>
 		<param name="cv_camera/cv_cap_prop_fourcc" type="double" value="1196444237"/>
 		<!-- 1196444237 corresponds to MJPG or MJPEG video format-->
-		<param name="cv_camera/cv_cap_prop_frame_width" type="double" value="960"/>
-		<param name="cv_camera/cv_cap_prop_frame_hieght" type="double" value="600"/>
+		<param name="cv_camera/cv_cap_prop_frame_width" type="double" value="640"/>
+		<param name="cv_camera/cv_cap_prop_frame_hieght" type="double" value="480"/>
 	</node>
 	<node pkg="image_proc" type="image_proc" ns="cv_camera" name="image_proc"/>
 	<include file="$(find aruco_ros)/launch/single.launch" />
