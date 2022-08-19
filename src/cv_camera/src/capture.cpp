@@ -79,8 +79,10 @@ void Capture::rescaleCameraInfo(int width, int height)
 void Capture::open(int32_t device_id)
 {
   cap_.open(device_id);
-  cap_.set(cv::CAP_PROP_FRAME_WIDTH,640);
-  cap_.set(cv::CAP_PROP_FRAME_HEIGHT,480);
+  cap_.set(cv::CAP_PROP_FRAME_WIDTH,960);
+  cap_.set(cv::CAP_PROP_FRAME_HEIGHT,600);
+  cap_.set(cv::CAP_PROP_FPS, 60.0);
+  //cap_.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
   if (!cap_.isOpened())
   {
     std::stringstream stream;

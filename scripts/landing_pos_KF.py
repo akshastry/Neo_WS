@@ -7,6 +7,7 @@ import traceback
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from threading import Lock
+from collections import deque
 #ROS imports
 import rospy
 from geometry_msgs.msg import Twist, Vector3, PoseStamped
@@ -70,7 +71,7 @@ Ki_z_t = 0.01
 # desired
 X_d = 1.15;
 Y_d = 0.0;
-Z_d = -0.95;
+Z_d = -0.85;
 yaw_d 	= 0.0;
 
 
@@ -115,7 +116,7 @@ Y_t1 = 0.0;
 Z_t1 = 0.0;
 
 dX_t = 0.1;
-dY_t = 0.00;
+dY_t = 0.03;
 dZ_t = 0.5; # hieght above the marker to park the vehicle
 phi_t 	= 0.0;
 theta_t = 0.0;
@@ -220,13 +221,21 @@ aX = 0; aY = 0; aZ = 0;
 accel_received_time = 0.0;
 std_dev = 0.0
 n_std = 0
+complete_land = False
+descend = False
 def accel_callback(data):
 	global aX, aY, aZ, accel_received_time
+	global descend, complete_land
 	# global std_dev, n_std
 
 	aX = (1-0.9) * aX + 0.9 * data.x
 	aY = (1-0.9) * aY + 0.9 * data.y
 	aZ = (1-0.9) * aZ + 0.9 * data.z
+
+	if(descend == True):
+		# print(data.z)
+		if(  data.z * data.z > 49.0):
+			complete_land = True
 
 	# std_dev = np.sqrt((std_dev**2.0 * n_std + aY**2.0)/ (n_std + 1))
 	# n_std = n_std + 1
@@ -249,6 +258,8 @@ Px_k = np.array([[1.0, 0.0],[0.0 ,1.0]])
 X_t2 = 0
 Y_t2 = 0
 Z_t2 = 0
+err_hist_x = deque([0.10], 100)
+err_hist_y = deque([0.10], 100)
 def aruco_callback(data):
 	global X_t, Y_t, Z_t, phi_t, theta_t, psi_t
 	global X_t1, Y_t1, Z_t1, X_t0, Y_t0, X_t02, Y_t02
@@ -265,11 +276,11 @@ def aruco_callback(data):
 	global x_k, y_k, Px_k, Py_k, X_t2, Y_t2, Z_t2, kalman_predict_time
 	global delay_time
 
-	global err_sum_x, err_sum_y
+	global err_hist_x, err_hist_y
 
 	if(autonomy_mode==False):
 		dta = rospy.get_time()-aruco_detect_time
-		LP_aruco = 2*3.14*dta*10.0/(2*3.14*dta*10.0+1.0)
+		LP_aruco = 2*3.14*dta*5.0/(2*3.14*dta*5.0+1.0)
 
 	aruco_detect_time 	= rospy.get_time()
 	dt1 = aruco_detect_time - kalman_predict_time
@@ -287,12 +298,8 @@ def aruco_callback(data):
 	# Y_t = (1 - LP_aruco) * Y_t + LP_aruco * data.pose.position.x
 	# Z_t = (1 - LP_aruco) * Z_t + LP_aruco * data.pose.position.z
 
-	# X_t = (1 - LP_aruco) * X_t + LP_aruco * (-data.pose.position.y - 0.05)
-	# Y_t = (1 - LP_aruco) * Y_t + LP_aruco * (data.pose.position.x + 0.06)
-	# Z_t = (1 - LP_aruco) * Z_t + LP_aruco * data.pose.position.z
-
-	X_t = (1 - LP_aruco) * X_t + LP_aruco * (data.pose.position.x)
-	Y_t = (1 - LP_aruco) * Y_t + LP_aruco * (data.pose.position.y - 0.02)
+	X_t = (1 - LP_aruco) * X_t + LP_aruco * (data.pose.position.x + 0.10)
+	Y_t = (1 - LP_aruco) * Y_t + LP_aruco * (data.pose.position.y + 0.03)
 	Z_t = (1 - LP_aruco) * Z_t + LP_aruco * data.pose.position.z
 
 	# X_d = (1 - 0.5) * X_d + 0.5 * ((X_t - dX_t) + X)
@@ -308,10 +315,8 @@ def aruco_callback(data):
 	# Y_t1 =  X_t * np.sin(yaw) + (Y_t - dY_t) * np.cos(yaw)
 	# Z_t1 = 	Z_t - dZ_t
 
-	# body2inert = R.from_euler('ZYX', [yaw, pitch ,roll])
-	# X_t, Y_t, Z_t = body2inert.apply([X_t, Y_t, Z_t]) + np.matmul(body2inert.as_dcm() - np.eye(3), [0.0, 0.0, 0.0]) - [0.0, 0.0, 0.0]
-
-	# print(Y_t2)
+	body2inert = R.from_euler('ZYX', [yaw, pitch ,roll])
+	X_t2, Y_t2, Z_t2 = body2inert.apply([X_t, Y_t, Z_t]) + np.matmul(body2inert.as_dcm() - np.eye(3), [0.14, 0.0, 0.0]) - [0.0, dY_t, dZ_t]
 
 	# X1, Y1, Z1 = np.array([X, Y, Z]) + np.array([VX, VY, VZ])*(aruco_detect_time - pose_received_time) \
 	# 			 + body2inert.apply([X_t + 0.14, Y_t, Z_t])
@@ -328,8 +333,12 @@ def aruco_callback(data):
 	# X_t02 = X_t2
 	# Y_t02 = Y_t2
 
-	x_k, Px_k = Kalman_Filter1(x_k, Px_k, -aX, X_t, 10**(-3.0), 10**(-3.0), 0.5*10**(-4.0), dt1)
-	y_k, Py_k = Kalman_Filter1(y_k, Py_k, -aY, Y_t, 10**(-3.0), 10**(-3.0), 0.5*10**(-4.0), dt1)
+	x_k, Px_k = Kalman_Filter1(x_k, Px_k, -aX, X_t2, 10**(-3.0), 10**(-3.0), 0.2*10**(-4.0), dt1)
+	y_k, Py_k = Kalman_Filter1(y_k, Py_k, -aY, Y_t2, 10**(-3.0), 10**(-3.0), 0.2*10**(-4.0), dt1)
+	
+	err_hist_x.appendleft(abs(x_k[0]))
+	err_hist_y.appendleft(abs(y_k[0]))
+
 	# rospy.loginfo("%f, %f\n", y_k[0], Y_t1)
 
 	#get orientation
@@ -372,15 +381,11 @@ def aruco_callback(data):
 	if(autonomy_mode):
 		print('entering aruco_mode')
 		delay_time = rospy.get_time()
-		y_k  = np.array([Y_t, 0.0])
+		y_k  = np.array([Y_t2, 0.0])
 		Py_k = np.eye(2)*100
-		x_k  = np.array([X_t, 0.0])
+		x_k  = np.array([X_t2, 0.0])
 		Px_k = np.eye(2)*100
-		# err_sum_y = 0.0
-		# err_sum_x = 0.0
-	# else:
-	# 	X_d = X + X_t2
-	# 	Y_d = Y + Y_t2
+		# err_sum_y = 0
 	autonomy_mode = False
 
 def Rdo_callback(data):
@@ -407,8 +412,6 @@ def constrain(x, a, b):
 
 err_X_prev = 0
 err_Y_prev = 0
-out_var1 = 0.0
-out_var2 = 0.0
 def autonomy_control():
 	global Kp_x, Kp_y, Kp_z, Kd_x, Kd_y, Kd_z, Ki_x, Ki_y, Ki_z
 	global Kp_x_t, Kp_y_t, Kp_z_t, Kd_x_t, Kd_y_t, Kd_z_t, Ki_x_t, Ki_y_t, Ki_z_t
@@ -430,13 +433,14 @@ def autonomy_control():
 
 	global x_k, Px_k, aX, y_k, Py_k, aY, kalman_predict_time
 
-	global out_var1, out_var2
-
+	global descend
+	global err_hist_x, err_hist_y
 
 	if (autonomy_mode):
 		err_X = X_d - X
 		err_Y = Y_d - Y
 		err_Z = Z_d - Z
+		Z_d_dot = 0.0
 	else:
 		curr_time = rospy.get_time()
 		dt1 	  = curr_time - kalman_predict_time
@@ -447,8 +451,25 @@ def autonomy_control():
 
 		err_X = x_k[0]
 		err_Y = y_k[0]
-		err_Z = Z_d - Z
-		# rospy.loginfo("%f, %f, %f\n",err_X, err_Y, Z)
+		# err_Z = Z_d - Z
+		if(descend == False):
+			if(max(list(err_hist_x)) < 0.04 and max(list(err_hist_y)) < 0.04):
+				descend = True
+				err_Z = 0.0
+				Z_d_dot = 0.5
+			else:
+				Z_d = -0.75
+				err_Z = Z_d - Z
+				Z_d_dot = 0.0
+		else:
+			if(max(list(err_hist_x)) < 0.06 and max(list(err_hist_y)) < 0.06):
+				err_Z = 0.0
+				Z_d_dot = 0.5
+			else:
+				descend = False
+				Z_d = -0.75
+				err_Z = Z_d - Z
+				Z_d_dot = 0.0
 		# err_Z = Z_t2
 	
 
@@ -476,18 +497,12 @@ def autonomy_control():
 		# ydd = 6.3 * err_Y + 5.0 * (0.0 - VY) + 0.02 * err_sum_y
 		# xdd = 6.3 * err_X + 5.0 * (0.0 - VX) + 0.02 * err_sum_x
 
-		ydd = 5.0 * err_Y + (5.5-0.0) * (0.0 - VY) + Ki_y * err_sum_y + 0.0*y_k[1]
-		xdd = 5.0 * err_X + (5.5-0.0) * (0.0 - VX) + Ki_x * err_sum_x + 0.0*x_k[1]
-		# if(rospy.get_time() - delay_time <= 10.0):
+		# if(rospy.get_time() - delay_time <= 5.0):
 		# 	ydd = 4.0 * err_Y + 5.5 * (0.0 - VY) + Ki_y * err_sum_y
 		# 	xdd = 4.0 * err_X + 5.5 * (0.0 - VX) + Ki_x * err_sum_x
 		# else:
-		# 	# print("0.2")
-		# 	ydd = 6.0 * err_Y + (6.5-0.5) * (0.0 - VY) + Ki_y * err_sum_y + 0.5*y_k[1]
-		# 	xdd = 6.0 * err_X + (6.5-0.5) * (0.0 - VX) + Ki_x * err_sum_x + 0.5*x_k[1]
-
-		# ydd = 4.0 * err_Y + 5.5 * (0.0 - VY) + Ki_y * err_sum_y
-		# xdd = 4.0 * err_X + 5.5 * (0.0 - VX) + Ki_x * err_sum_x + 0.00*x_k[1]
+		ydd = 5.0 * err_Y + 5.5 * (0.0 - VY) + Ki_y * err_sum_y
+		xdd = 5.0 * err_X + 5.5 * (0.0 - VX) + Ki_x * err_sum_x
 
 		# xdd = Kp_x * err_X + 0.8 * Kd_x * (0.0 - VX) + Ki_x * err_sum_x + 1.5 * Kd_x * x_k[1]
 		# ydd = Kp_y * err_Y + 0.8 * Kd_y * (0.0 - VY) + Ki_y * err_sum_y + 1.5* Kd_y * y_k[1]
@@ -497,7 +512,7 @@ def autonomy_control():
 	
 	# xdd = Kp_x * err_X + Kd_x * (0.0 - VX) + Ki_x * err_sum_x
 	# ydd = Kp_y * err_Y + 2*Kd_y * (0.0 - VY) + Ki_y * err_sum_y
-	zdd = Kp_z * err_Z + Kd_z * (0.0 - VZ) + Ki_z * err_sum_z
+	zdd = Kp_z * err_Z + Kd_z * (Z_d_dot - VZ) + Ki_z * err_sum_z
 	# print(err_Z, zdd)
 
 	r_d	= Kp_yaw * err_yaw + Ki_yaw * err_sum_yaw
@@ -508,8 +523,6 @@ def autonomy_control():
 
 	# print(err_Y)
 	
-	out_var1 = xdd
-	out_var2 = ydd
 
 	return xdd, ydd, zdd, r_d
 
@@ -522,9 +535,9 @@ def main():
 
 	global autonomy_mode, aruco_detect_time
 
-	global Y_t2, y_k
+	global complete_land
 
-	global out_var1, out_var2
+	global Y_t2, y_k
 
 	ctrl 	= Twist();
 	states 	= Twist();
@@ -582,6 +595,13 @@ def main():
 				theta_d	  	= 0.0*np.pi/180.0
 				r_d 		= 0.0
 
+			if(complete_land == True):
+				T_d 			= 0.0
+				phi_d	  		= 0.0*np.pi/180.0
+				theta_d	  		= 0.0*np.pi/180.0
+				r_d 			= 0.0
+
+
 			
 			# # publish to a topic
 			# if(rospy.get_time() - pose_received_time < 1.0/30.0):
@@ -593,7 +613,7 @@ def main():
 
 			ctrl.linear.x    = radio_on
 			ctrl.linear.y 	= 0.0
-			ctrl.linear.z 	= constrain(T_d * Thrust_sf, 0.0, 2.6)
+			ctrl.linear.z 	= constrain(T_d * Thrust_sf, 0.0, 3.2)
 			ctrl.angular.x 	= constrain(phi_d * 180.0/np.pi, -10.0, 10.0) 
 			ctrl.angular.y 	= constrain(theta_d * 180.0/np.pi, -10.0, 10.0)
 			ctrl.angular.z 	= constrain(r_d * 180.0/np.pi, -30, 30)
@@ -609,13 +629,13 @@ def main():
 			# pub1.publish(states);
 
 
-			out.linear.x 	= out_var1#roll*180.0/np.pi#meas
-			out.linear.y 	= out_var2#x_k_z[0]
-			out.linear.z 	= 0.0#v2p
-			out.angular.x 	= 0.0#yaw_d * 180.0/np.pi
-			out.angular.y 	= 0.0#psi_t * 180.0/np.pi
-			out.angular.z 	= 0.0#0.0
-			pub2.publish(out);
+			# out.linear.x 	= Y_t2#roll*180.0/np.pi#meas
+			# out.linear.y 	= y_k[0]#x_k_z[0]
+			# out.linear.z 	= 0.0#v2p
+			# out.angular.x 	= 0.0#yaw_d * 180.0/np.pi
+			# out.angular.y 	= 0.0#psi_t * 180.0/np.pi
+			# out.angular.z 	= 0.0#0.0
+			# pub2.publish(out);
 
 
 
